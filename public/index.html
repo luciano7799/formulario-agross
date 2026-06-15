@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cadastro de Cliente</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #eef0f4;
+    height: 100vh;
+    padding: 16px;
+    overflow: hidden;
+  }
+  .layout {
+    display: flex;
+    gap: 16px;
+    align-items: stretch;
+    height: 100%;
+  }
+
+  /* ── Coluna esquerda: formulário ── */
+  .form-col { flex: 0 0 45%; display: flex; flex-direction: column; }
+  .card { background: #fff; border-radius: 14px; box-shadow: 0 4px 20px rgba(0,0,0,0.09); overflow: hidden; display: flex; flex-direction: column; flex: 1; }
+  .card-header {
+    background: #1a1a2e; padding: 22px 26px 18px;
+    color: #fff; display: flex; align-items: center; gap: 14px;
+  }
+  .icon-box {
+    width: 40px; height: 40px; background: #4f46e5;
+    border-radius: 9px; display: flex; align-items: center;
+    justify-content: center; font-size: 18px; flex-shrink: 0;
+  }
+  .card-header h1 { font-size: 17px; font-weight: 700; }
+  .card-header p  { font-size: 11px; opacity: 0.6; margin-top: 3px; }
+  .card-body { padding: 22px 26px 26px; overflow-y: auto; flex: 1; }
+  .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; }
+  .field { margin-bottom: 15px; }
+  .field label { display: block; font-size: 11px; font-weight: 600; color: #555; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.3px; }
+  .req { color: #4f46e5; }
+  input[type="text"], input[type="number"] {
+    width: 100%; padding: 9px 12px;
+    border: 1.5px solid #e4e7ec; border-radius: 7px;
+    font-size: 13px; background: #f9fafb; outline: none;
+    transition: border 0.2s, box-shadow 0.2s;
+  }
+  input:focus { border-color: #4f46e5; box-shadow: 0 0 0 3px rgba(79,70,229,0.10); background: #fff; }
+  .radio-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .radio-item {
+    padding: 9px 6px; border: 2px solid #e4e7ec; border-radius: 8px;
+    background: #fff; font-size: 12px; font-weight: 500; color: #444;
+    cursor: pointer; text-align: center;
+    transition: all 0.15s; user-select: none;
+  }
+  .radio-item:hover { border-color: #4f46e5; color: #4f46e5; background: #f5f3ff; }
+  .radio-item.selected { border-color: #4f46e5; background: #4f46e5; color: #fff; }
+  .radio-item input { display: none; }
+  .btn-add {
+    width: 100%; padding: 10px;
+    background: #4f46e5; color: #fff; border: none;
+    border-radius: 8px; font-size: 14px; font-weight: 700;
+    cursor: pointer; transition: background 0.2s; margin-top: 2px;
+  }
+  .btn-add:hover { background: #4338ca; }
+
+  /* ── Coluna direita: tabela ── */
+  .table-col { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .table-card { background: #fff; border-radius: 14px; box-shadow: 0 4px 20px rgba(0,0,0,0.09); overflow: hidden; display: flex; flex-direction: column; flex: 1; }
+  .table-header {
+    background: #1a1a2e; padding: 18px 24px;
+    color: #fff; display: flex; align-items: center; justify-content: space-between;
+  }
+  .table-header h2 { font-size: 15px; font-weight: 700; }
+  .badge { background: #4f46e5; color: #fff; border-radius: 20px; padding: 2px 12px; font-size: 12px; font-weight: 700; }
+  .table-wrap { overflow: auto; flex: 1; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  thead tr { background: #f4f5f7; }
+  thead th { padding: 9px 13px; text-align: left; font-size: 10px; font-weight: 700; color: #777; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e4e7ec; white-space: nowrap; }
+  tbody tr { border-bottom: 1px solid #f0f2f5; transition: background 0.15s; }
+  tbody tr:hover { background: #fafbff; }
+  tbody td { padding: 10px 13px; color: #333; vertical-align: middle; }
+  .td-actions { display: flex; gap: 5px; }
+  .btn-edit { background: #ede9fe; color: #4f46e5; border: none; border-radius: 5px; padding: 4px 10px; font-size: 11px; font-weight: 600; cursor: pointer; }
+  .btn-edit:hover { opacity: 0.75; }
+  .btn-del  { background: #fee2e2; color: #dc2626; border: none; border-radius: 5px; padding: 4px 10px; font-size: 11px; font-weight: 600; cursor: pointer; }
+  .btn-del:hover  { opacity: 0.75; }
+  .empty-state { padding: 40px; text-align: center; color: #bbb; font-size: 13px; }
+  .table-footer { padding: 14px 24px; border-top: 1px solid #f0f2f5; display: flex; align-items: center; justify-content: flex-end; gap: 12px; }
+  .btn-submit {
+    padding: 10px 26px; background: #059669; color: #fff;
+    border: none; border-radius: 8px; font-size: 14px; font-weight: 700;
+    cursor: pointer; transition: background 0.2s, opacity 0.2s;
+  }
+  .btn-submit:hover { background: #047857; }
+  .btn-submit:disabled { opacity: 0.4; cursor: not-allowed; }
+  .alert { border-radius: 7px; padding: 10px 14px; font-size: 12px; font-weight: 500; display: none; }
+  .alert-success { background: #ecfdf5; border: 1px solid #6ee7b7; color: #065f46; }
+  .alert-error   { background: #fef2f2; border: 1px solid #fca5a5; color: #991b1b; }
+</style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- ── Formulário ── -->
+  <div class="form-col">
+    <div class="card">
+      <div class="card-header">
+        <div class="icon-box">📋</div>
+        <div>
+          <h1>Cadastro de Cliente</h1>
+          <p>Preencha e clique em Adicionar</p>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="row-2">
+          <div class="field">
+            <label>CNPJ <span class="req">*</span></label>
+            <input type="text" id="cnpj" placeholder="00.000.000/0000-00" maxlength="18">
+          </div>
+          <div class="field">
+            <label>Razão Social <span class="req">*</span></label>
+            <input type="text" id="razao_social" placeholder="Nome da empresa">
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Filial <span class="req">*</span></label>
+          <div class="radio-grid" id="filial-grid">
+            <div class="radio-item" data-value="Paulínia"    onclick="selecionarFilial(this)">Paulínia</div>
+            <div class="radio-item" data-value="Pouso Alegre" onclick="selecionarFilial(this)">Pouso Alegre</div>
+            <div class="radio-item" data-value="Anápolis"   onclick="selecionarFilial(this)">Anápolis</div>
+            <div class="radio-item" data-value="Sete Lagoas" onclick="selecionarFilial(this)">Sete Lagoas</div>
+            <div class="radio-item" data-value="Lins"       onclick="selecionarFilial(this)">Lins</div>
+            <div class="radio-item" data-value="Petrolina"  onclick="selecionarFilial(this)">Petrolina</div>
+            <div class="radio-item" data-value="Cariacia"   onclick="selecionarFilial(this)">Cariacia</div>
+            <div class="radio-item" data-value="Carazinho"  onclick="selecionarFilial(this)">Carazinho</div>
+          </div>
+        </div>
+
+        <div class="row-2">
+          <div class="field">
+            <label>Vendedor <span class="req">*</span></label>
+            <input type="text" id="vendedor" placeholder="Nome do vendedor">
+          </div>
+          <div class="field">
+            <label>Meta <span class="req">*</span></label>
+            <input type="text" id="meta" placeholder="R$ 0,00">
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Fornecedores que pretende crescer</label>
+          <input type="text" id="fornecedores" placeholder="Insira sua resposta">
+        </div>
+
+        <div class="field">
+          <label>Percentual estimado (%)</label>
+          <input type="number" id="percentual_estimado" placeholder="Ex: 15" min="0" max="100">
+        </div>
+
+        <button class="btn-add" id="btn-add" onclick="adicionarItem()">+ Adicionar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Tabela ── -->
+  <div class="table-col">
+    <div class="table-card">
+      <div class="table-header">
+        <h2>Itens adicionados</h2>
+        <span class="badge" id="badge">0</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>CNPJ</th>
+              <th>Razão Social</th>
+              <th>Filial</th>
+              <th>Vendedor</th>
+              <th>Meta</th>
+              <th>% Est.</th>
+              <th>Fornecedores</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+        <div class="empty-state" id="empty-state">Nenhum item adicionado ainda.</div>
+      </div>
+      <div class="table-footer">
+        <div class="alert alert-success" id="msg-success">✓ Enviado com sucesso!</div>
+        <div class="alert alert-error"   id="msg-error"></div>
+        <button class="btn-submit" id="btn-submit" disabled onclick="enviarTudo()">Enviar Formulário</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+<script>
+  let itens = [];
+  let editandoIdx = null;
+
+  function adicionarItem() {
+    const cnpj                = document.getElementById('cnpj').value.trim();
+    const razao_social        = document.getElementById('razao_social').value.trim();
+    const filial              = document.querySelector('#filial-grid .radio-item.selected')?.dataset.value || '';
+    const vendedor            = document.getElementById('vendedor').value.trim();
+    const metaRaw             = document.getElementById('meta').value.replace(/\D/g, '');
+    const meta                = metaRaw ? Number(metaRaw) / 100 : null;
+    const fornecedores        = document.getElementById('fornecedores').value.trim();
+    const percentual_estimado = document.getElementById('percentual_estimado').value
+                                  ? Number(document.getElementById('percentual_estimado').value) : null;
+
+    if (!cnpj || !razao_social || !filial || !vendedor || !meta) {
+      alert('Preencha todos os campos obrigatórios (CNPJ, Razão Social, Filial, Vendedor e Meta).');
+      return;
+    }
+
+    const item = { cnpj, razao_social, filial, vendedor, meta, fornecedores: fornecedores || null, percentual_estimado };
+
+    if (editandoIdx !== null) {
+      itens[editandoIdx] = item;
+      editandoIdx = null;
+      document.getElementById('btn-add').textContent = '+ Adicionar';
+    } else {
+      itens.push(item);
+    }
+
+    limparForm();
+    renderTabela();
+  }
+
+  function editarItem(idx) {
+    const item = itens[idx];
+    document.getElementById('cnpj').value            = item.cnpj;
+    document.getElementById('razao_social').value    = item.razao_social;
+    document.getElementById('vendedor').value        = item.vendedor;
+    document.getElementById('fornecedores').value    = item.fornecedores || '';
+    document.getElementById('percentual_estimado').value = item.percentual_estimado || '';
+    document.querySelectorAll('#filial-grid .radio-item').forEach(el => {
+      el.classList.toggle('selected', el.dataset.value === item.filial);
+    });
+    document.getElementById('meta').value = formatarMoeda(Math.round(item.meta * 100));
+    editandoIdx = idx;
+    document.getElementById('btn-add').textContent = '✓ Salvar alteração';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function removerItem(idx) {
+    itens.splice(idx, 1);
+    if (editandoIdx === idx) {
+      editandoIdx = null;
+      document.getElementById('btn-add').textContent = '+ Adicionar';
+    }
+    renderTabela();
+  }
+
+  function renderTabela() {
+    const tbody = document.getElementById('tbody');
+    const empty = document.getElementById('empty-state');
+    const btn   = document.getElementById('btn-submit');
+    document.getElementById('badge').textContent = itens.length;
+
+    if (itens.length === 0) {
+      tbody.innerHTML = '';
+      empty.style.display = 'block';
+      btn.disabled = true;
+      return;
+    }
+    empty.style.display = 'none';
+    btn.disabled = false;
+
+    tbody.innerHTML = itens.map((it, i) => `
+      <tr>
+        <td>${i + 1}</td>
+        <td>${it.cnpj}</td>
+        <td>${it.razao_social}</td>
+        <td>${it.filial}</td>
+        <td>${it.vendedor}</td>
+        <td>R$ ${it.meta.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+        <td>${it.percentual_estimado != null ? it.percentual_estimado + '%' : '-'}</td>
+        <td>${it.fornecedores || '-'}</td>
+        <td>
+          <div class="td-actions">
+            <button class="btn-edit" onclick="editarItem(${i})">Editar</button>
+            <button class="btn-del"  onclick="removerItem(${i})">Remover</button>
+          </div>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  async function enviarTudo() {
+    const btn = document.getElementById('btn-submit');
+    btn.disabled = true;
+    btn.textContent = 'Enviando...';
+    hideMessages();
+
+    try {
+      const res = await fetch('/api/formulario', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ itens })
+      });
+      const data = await res.json();
+      if (data.success) {
+        itens = [];
+        renderTabela();
+        document.getElementById('msg-success').style.display = 'block';
+      } else {
+        showError(data.error || 'Erro desconhecido.');
+      }
+    } catch {
+      showError('Não foi possível conectar ao servidor.');
+    } finally {
+      btn.disabled = itens.length === 0;
+      btn.textContent = 'Enviar Formulário';
+    }
+  }
+
+  function selecionarFilial(el) {
+    document.querySelectorAll('#filial-grid .radio-item').forEach(r => r.classList.remove('selected'));
+    el.classList.add('selected');
+  }
+
+  function limparForm() {
+    ['cnpj','razao_social','vendedor','meta','fornecedores','percentual_estimado']
+      .forEach(id => document.getElementById(id).value = '');
+    document.querySelectorAll('#filial-grid .radio-item').forEach(r => r.classList.remove('selected'));
+  }
+
+  function hideMessages() {
+    document.getElementById('msg-success').style.display = 'none';
+    document.getElementById('msg-error').style.display   = 'none';
+  }
+  function showError(msg) {
+    const el = document.getElementById('msg-error');
+    el.textContent = '✕ ' + msg;
+    el.style.display = 'block';
+  }
+  function formatarMoeda(cents) {
+    if (!cents) return '';
+    return 'R$ ' + (cents / 100).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  }
+
+  document.getElementById('meta').addEventListener('input', function(e) {
+    const digits = e.target.value.replace(/\D/g, '').slice(0, 13);
+    e.target.value = digits ? formatarMoeda(parseInt(digits, 10)) : '';
+  });
+
+  document.getElementById('cnpj').addEventListener('input', function(e) {
+    let v = e.target.value.replace(/\D/g, '').slice(0, 14);
+    if      (v.length > 12) v = v.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{0,2})/, '$1.$2.$3/$4-$5');
+    else if (v.length > 8)  v = v.replace(/^(\d{2})(\d{3})(\d{3})(\d{0,4})/, '$1.$2.$3/$4');
+    else if (v.length > 5)  v = v.replace(/^(\d{2})(\d{3})(\d{0,3})/, '$1.$2.$3');
+    else if (v.length > 2)  v = v.replace(/^(\d{2})(\d{0,3})/, '$1.$2');
+    e.target.value = v;
+  });
+
+  renderTabela();
+</script>
+</body>
+</html>

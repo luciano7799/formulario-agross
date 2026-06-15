@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — Formulários</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: #eef0f4; min-height: 100vh; }
+  .topbar {
+    background: #1a1a2e; height: 56px; padding: 0 28px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 10;
+  }
+  .topbar-left { display: flex; align-items: center; gap: 12px; }
+  .topbar-logo { width: 34px; height: 34px; background: #4f46e5; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+  .topbar-title { color: #fff; font-size: 15px; font-weight: 700; }
+  .topbar-sub { color: rgba(255,255,255,0.4); font-size: 13px; margin-left: 4px; }
+  .btn-logout {
+    background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.7);
+    border: 1px solid rgba(255,255,255,0.12); border-radius: 6px;
+    padding: 6px 14px; font-size: 12px; cursor: pointer; transition: background 0.15s;
+  }
+  .btn-logout:hover { background: rgba(255,255,255,0.15); }
+  .body { padding: 24px 28px; }
+  .panel-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 20px; }
+  .panel-title { font-size: 20px; font-weight: 700; color: #1a1a2e; }
+  .panel-sub { font-size: 13px; color: #888; margin-top: 3px; }
+  .btn-excel {
+    display: flex; align-items: center; gap: 7px;
+    background: #059669; color: #fff; border: none; border-radius: 8px;
+    padding: 10px 18px; font-size: 13px; font-weight: 700; cursor: pointer;
+    text-decoration: none; transition: background 0.2s;
+  }
+  .btn-excel:hover { background: #047857; }
+  .table-card { background: #fff; border-radius: 14px; box-shadow: 0 2px 16px rgba(0,0,0,0.08); overflow: hidden; }
+  .toolbar { padding: 14px 20px; border-bottom: 1px solid #f0f2f5; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .search-input {
+    flex: 1; min-width: 200px; max-width: 320px; padding: 8px 12px;
+    border: 1.5px solid #e4e7ec; border-radius: 7px; font-size: 13px; background: #f9fafb; outline: none;
+  }
+  .search-input:focus { border-color: #4f46e5; }
+  .filter-select {
+    padding: 8px 12px; border: 1.5px solid #e4e7ec; border-radius: 7px;
+    font-size: 13px; background: #f9fafb; color: #444; outline: none; cursor: pointer;
+  }
+  .badge-total { margin-left: auto; background: #f0f0ff; color: #4f46e5; border-radius: 20px; padding: 3px 14px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead tr { background: #f4f5f7; }
+  thead th { padding: 11px 16px; text-align: left; font-size: 11px; font-weight: 700; color: #666; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e4e7ec; white-space: nowrap; }
+  tbody tr { border-bottom: 1px solid #f0f2f5; transition: background 0.15s; }
+  tbody tr:hover { background: #fafbff; }
+  tbody td { padding: 12px 16px; color: #333; vertical-align: middle; }
+  .filial-badge { display: inline-block; background: #ede9fe; color: #4f46e5; border-radius: 20px; padding: 2px 10px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+  .meta-val { font-weight: 600; color: #059669; white-space: nowrap; }
+  .date-val { color: #aaa; font-size: 12px; white-space: nowrap; }
+  .empty-state { padding: 48px; text-align: center; color: #bbb; font-size: 14px; display: none; }
+  .loading { padding: 48px; text-align: center; color: #aaa; font-size: 13px; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="topbar-logo">📋</div>
+    <span class="topbar-title">AgRoss</span>
+    <span class="topbar-sub">/ Admin</span>
+  </div>
+  <form method="POST" action="/admin/logout" style="margin:0">
+    <button class="btn-logout" type="submit">Sair</button>
+  </form>
+</div>
+
+<div class="body">
+  <div class="panel-header">
+    <div>
+      <div class="panel-title">Formulários recebidos</div>
+      <div class="panel-sub">Todos os cadastros enviados pelo formulário</div>
+    </div>
+    <a class="btn-excel" href="/api/admin/export">⬇ Exportar Excel</a>
+  </div>
+
+  <div class="table-card">
+    <div class="toolbar">
+      <input class="search-input" id="busca" placeholder="🔍  Buscar CNPJ ou razão social..." oninput="filtrar()">
+      <select class="filter-select" id="filtro-filial" onchange="filtrar()">
+        <option value="">Todas as filiais</option>
+        <option>Paulínia</option>
+        <option>Pouso Alegre</option>
+        <option>Anápolis</option>
+        <option>Sete Lagoas</option>
+        <option>Lins</option>
+        <option>Petrolina</option>
+        <option>Cariacia</option>
+        <option>Carazinho</option>
+      </select>
+      <span class="badge-total" id="contador">0 registros</span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th><th>CNPJ</th><th>Razão Social</th><th>Filial</th>
+            <th>Vendedor</th><th>Meta</th><th>% Est.</th><th>Fornecedores</th><th>Enviado em</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+      <div class="loading" id="loading">Carregando...</div>
+      <div class="empty-state" id="empty">Nenhum registro encontrado.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let todos = [];
+
+  async function carregar() {
+    const res = await fetch('/api/admin/formularios');
+    todos = await res.json();
+    document.getElementById('loading').style.display = 'none';
+    filtrar();
+  }
+
+  function filtrar() {
+    const busca  = document.getElementById('busca').value.toLowerCase();
+    const filial = document.getElementById('filtro-filial').value;
+    const filtrados = todos.filter(r =>
+      (!busca  || r.cnpj.toLowerCase().includes(busca) || r.razao_social.toLowerCase().includes(busca)) &&
+      (!filial || r.filial === filial)
+    );
+    renderizar(filtrados);
+  }
+
+  function renderizar(lista) {
+    const tbody = document.getElementById('tbody');
+    const empty = document.getElementById('empty');
+    document.getElementById('contador').textContent = lista.length + ' registro' + (lista.length !== 1 ? 's' : '');
+    if (lista.length === 0) {
+      tbody.innerHTML = '';
+      empty.style.display = 'block';
+      return;
+    }
+    empty.style.display = 'none';
+    tbody.innerHTML = lista.map(r => `
+      <tr>
+        <td>${r.id}</td>
+        <td>${r.cnpj}</td>
+        <td>${r.razao_social}</td>
+        <td><span class="filial-badge">${r.filial}</span></td>
+        <td>${r.vendedor}</td>
+        <td class="meta-val">R$ ${Number(r.meta).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+        <td>${r.percentual_estimado != null ? r.percentual_estimado + '%' : '-'}</td>
+        <td>${r.fornecedores || '-'}</td>
+        <td class="date-val">${r.criado_em}</td>
+      </tr>
+    `).join('');
+  }
+
+  carregar();
+</script>
+</body>
+</html>
