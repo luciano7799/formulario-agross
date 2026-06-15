@@ -1,8 +1,9 @@
 const express = require('express');
 const path = require('path');
 const session = require('express-session');
+const pgSession = require('connect-pg-simple')(session);
 const XLSX = require('xlsx');
-const { init, inserirFormulario, listarFormularios } = require('./database');
+const { pool, init, inserirFormulario, listarFormularios } = require('./database');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -13,6 +14,10 @@ const ADMIN_SENHA = 'pati@agross';
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(session({
+  store: new pgSession({
+    pool,
+    createTableIfMissing: true,
+  }),
   secret: process.env.SESSION_SECRET || 'agross-dev-secret',
   resave: false,
   saveUninitialized: false,

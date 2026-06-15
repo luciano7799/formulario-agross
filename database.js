@@ -42,4 +42,4 @@ async function listarFormularios() {
   return rows;
 }
 
-module.exports = { init, inserirFormulario, listarFormularios };
+module.exports = { pool, init, inserirFormulario, listarFormularios };
