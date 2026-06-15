@@ -91,6 +91,20 @@ app.get('/api/admin/export', requireAdmin, async (req, res) => {
   }
 });
 
+// ── Excluir registro ──
+app.delete('/api/admin/formularios/:id', requireAdmin, async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) return res.status(400).json({ error: 'ID inválido.' });
+  try {
+    const { rowCount } = await pool.query('DELETE FROM formularios WHERE id = $1', [id]);
+    if (rowCount === 0) return res.status(404).json({ error: 'Registro não encontrado.' });
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erro ao excluir.' });
+  }
+});
+
 // ── Formulário público ──
 app.post('/api/formulario', async (req, res) => {
   const { itens } = req.body;

@@ -57,6 +57,8 @@
   .date-val { color: #aaa; font-size: 12px; white-space: nowrap; }
   .empty-state { padding: 48px; text-align: center; color: #bbb; font-size: 14px; display: none; }
   .loading { padding: 48px; text-align: center; color: #aaa; font-size: 13px; }
+  .btn-del { background: none; border: none; cursor: pointer; color: #ccc; font-size: 15px; padding: 2px 6px; border-radius: 4px; transition: color 0.15s, background 0.15s; }
+  .btn-del:hover { color: #e53e3e; background: #fff0f0; }
 </style>
 </head>
 <body>
@@ -102,7 +104,7 @@
         <thead>
           <tr>
             <th>#</th><th>CNPJ</th><th>Razão Social</th><th>Filial</th>
-            <th>Vendedor</th><th>Meta</th><th>% Est.</th><th>Fornecedores</th><th>Enviado em</th>
+            <th>Vendedor</th><th>Meta</th><th>% Est.</th><th>Fornecedores</th><th>Enviado em</th><th></th>
           </tr>
         </thead>
         <tbody id="tbody"></tbody>
@@ -154,8 +156,24 @@
         <td>${r.percentual_estimado != null ? r.percentual_estimado + '%' : '-'}</td>
         <td>${r.fornecedores || '-'}</td>
         <td class="date-val">${r.criado_em}</td>
+        <td><button class="btn-del" title="Excluir" onclick="excluir(${r.id}, this)">🗑</button></td>
       </tr>
     `).join('');
+  }
+
+  async function excluir(id, btn) {
+    if (!confirm('Excluir este registro permanentemente?')) return;
+    btn.disabled = true;
+    btn.textContent = '…';
+    const res = await fetch('/api/admin/formularios/' + id, { method: 'DELETE' });
+    if (res.ok) {
+      todos = todos.filter(r => r.id !== id);
+      filtrar();
+    } else {
+      alert('Erro ao excluir.');
+      btn.disabled = false;
+      btn.textContent = '🗑';
+    }
   }
 
   carregar();
