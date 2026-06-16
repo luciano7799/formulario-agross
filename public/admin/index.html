@@ -59,6 +59,21 @@
   .loading { padding: 48px; text-align: center; color: #aaa; font-size: 13px; }
   .btn-del { background: none; border: none; cursor: pointer; color: #ccc; font-size: 15px; padding: 2px 6px; border-radius: 4px; transition: color 0.15s, background 0.15s; }
   .btn-del:hover { color: #e53e3e; background: #fff0f0; }
+
+  /* Dashboard */
+  .dash-section { margin-bottom: 24px; }
+  .dash-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 14px; }
+  .dash-title { font-size: 16px; font-weight: 700; color: #1a1a2e; }
+  .dash-sub { font-size: 12px; color: #888; margin-top: 2px; }
+  .dash-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+  .dash-card { background: #fff; border: 1px solid #e4e7ec; border-radius: 12px; padding: 16px 18px; }
+  .dash-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .dash-card-name { font-size: 14px; font-weight: 600; color: #1a1a2e; }
+  .dash-card-count { font-size: 11px; background: #f3f4f6; color: #666; border-radius: 20px; padding: 2px 8px; }
+  .dash-card-meta { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+  .dash-bar-bg { background: #eee; border-radius: 4px; height: 5px; overflow: hidden; margin-bottom: 6px; }
+  .dash-bar-fill { height: 100%; border-radius: 4px; }
+  .dash-card-pct { font-size: 11px; color: #999; }
 </style>
 </head>
 <body>
@@ -81,6 +96,16 @@
       <div class="panel-sub">Todos os cadastros enviados pelo formulário</div>
     </div>
     <a class="btn-excel" href="/api/admin/export">⬇ Exportar Excel</a>
+  </div>
+
+  <div class="dash-section">
+    <div class="dash-header">
+      <div>
+        <div class="dash-title">Meta por filial</div>
+        <div class="dash-sub" id="dash-sub">Carregando...</div>
+      </div>
+    </div>
+    <div class="dash-grid" id="dash-grid"></div>
   </div>
 
   <div class="table-card">
@@ -118,10 +143,46 @@
 <script>
   let todos = [];
 
+  const DASH_COLORS = ['#185FA5','#0F6E56','#3B6D11','#993C1D','#533AB7','#993556','#BA7517','#5F5E5A'];
+
+  function renderDash(data) {
+    const porFilial = {};
+    for (const f of data) {
+      const fil = f.filial || 'Sem filial';
+      if (!porFilial[fil]) porFilial[fil] = { total: 0, count: 0 };
+      porFilial[fil].total += Number(f.meta) || 0;
+      porFilial[fil].count += 1;
+    }
+    const sorted = Object.entries(porFilial).sort((a, b) => b[1].total - a[1].total);
+    const totalGeral = sorted.reduce((s, [, v]) => s + v.total, 0);
+    const maxTotal = sorted[0]?.[1].total || 1;
+    const fmt = v => v >= 1e6
+      ? 'R$ ' + (v / 1e6).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' M'
+      : 'R$ ' + v.toLocaleString('pt-BR');
+
+    document.getElementById('dash-sub').textContent =
+      data.length + ' formulários · Total: ' + fmt(totalGeral);
+
+    document.getElementById('dash-grid').innerHTML = sorted.map(([filial, v], i) => `
+      <div class="dash-card">
+        <div class="dash-card-header">
+          <span class="dash-card-name">${filial}</span>
+          <span class="dash-card-count">${v.count} form.</span>
+        </div>
+        <div class="dash-card-meta" style="color:${DASH_COLORS[i % DASH_COLORS.length]}">${fmt(v.total)}</div>
+        <div class="dash-bar-bg">
+          <div class="dash-bar-fill" style="width:${Math.round(v.total / maxTotal * 100)}%;background:${DASH_COLORS[i % DASH_COLORS.length]}"></div>
+        </div>
+        <div class="dash-card-pct">${Math.round(v.total / totalGeral * 100)}% do total</div>
+      </div>
+    `).join('');
+  }
+
   async function carregar() {
     const res = await fetch('/api/admin/formularios');
     todos = await res.json();
     document.getElementById('loading').style.display = 'none';
+    renderDash(todos);
     filtrar();
   }
 
