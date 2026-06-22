@@ -19,13 +19,24 @@ async function init() {
       criado_em TIMESTAMPTZ DEFAULT NOW()
     )
   `);
+  await pool.query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS formularios_cnpj_idx ON formularios (cnpj)
+  `);
 }
 
 async function inserirFormulario(dados) {
   await pool.query(
     `INSERT INTO formularios
        (cnpj, razao_social, filial, vendedor, meta, fornecedores, percentual_estimado)
-     VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+     VALUES ($1,$2,$3,$4,$5,$6,$7)
+     ON CONFLICT (cnpj) DO UPDATE SET
+       razao_social        = EXCLUDED.razao_social,
+       filial              = EXCLUDED.filial,
+       vendedor            = EXCLUDED.vendedor,
+       meta                = EXCLUDED.meta,
+       fornecedores        = EXCLUDED.fornecedores,
+       percentual_estimado = EXCLUDED.percentual_estimado,
+       criado_em           = NOW()`,
     [dados.cnpj, dados.razao_social, dados.filial, dados.vendedor,
      dados.meta, dados.fornecedores || null, dados.percentual_estimado || null]
   );
