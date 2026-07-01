@@ -8,6 +8,8 @@
 
 **Tech Stack:** Node.js, Express 5, PostgreSQL (`pg`), `express-session`, `bcryptjs` (JS puro — escolhido no lugar do `bcrypt` nativo citado na spec para evitar compilação no Windows/Render; API equivalente).
 
+**Status de verificação (2026-07-01):** Tasks 1–7 implementadas e commitadas na branch `feature/login-gerentes`. A Task 8 (teste ponta a ponta) **não foi executada ao vivo** — não havia Postgres acessível (3 contas Render verificadas não tinham o serviço `formulario-db`; Docker Desktop não respondeu localmente). Em vez disso, foi feita revisão manual linha a linha de `server.js`, `database.js`, `auth.js`, `scripts/criar-gerente.js`, `public/login.html` e `public/index.html`, com verificação de sintaxe (`node -c`) em todos os arquivos. **Antes de mesclar para `master`/fazer deploy, rode a Task 8 do checklist abaixo manualmente com uma `DATABASE_URL` real.**
+
 ---
 
 ## File Structure
