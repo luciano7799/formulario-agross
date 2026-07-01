@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Alavanca AgRoss — Login</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #eef0f4; min-height: 100vh;
+    display: flex; align-items: center; justify-content: center; padding: 24px;
+  }
+  .card { background: #fff; border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.10); width: 100%; max-width: 380px; overflow: hidden; }
+  .card-header { background: #1a1a2e; padding: 32px 32px 24px; color: #fff; text-align: center; }
+  .card-header .icon { font-size: 36px; margin-bottom: 12px; }
+  .card-header h1 { font-size: 18px; font-weight: 700; }
+  .card-header p { font-size: 12px; opacity: 0.5; margin-top: 4px; }
+  .card-body { padding: 28px 32px 32px; }
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-size: 12px; font-weight: 600; color: #555; margin-bottom: 5px; }
+  .field input {
+    width: 100%; padding: 10px 13px;
+    border: 1.5px solid #e4e7ec; border-radius: 8px;
+    font-size: 14px; background: #f9fafb; outline: none;
+    transition: border 0.2s;
+  }
+  .field input:focus { border-color: #4f46e5; background: #fff; }
+  .btn {
+    width: 100%; padding: 11px; background: #4f46e5; color: #fff;
+    border: none; border-radius: 8px; font-size: 15px; font-weight: 700;
+    cursor: pointer; margin-top: 4px; transition: background 0.2s;
+  }
+  .btn:hover { background: #4338ca; }
+  .erro { background: #fef2f2; border: 1px solid #fca5a5; color: #991b1b; border-radius: 8px; padding: 10px 14px; font-size: 13px; margin-bottom: 16px; display: none; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="card-header">
+    <div class="icon">📋</div>
+    <h1>Alavanca AgRoss</h1>
+    <p>Acesso do gerente</p>
+  </div>
+  <div class="card-body">
+    <div class="erro" id="erro">E-mail ou senha incorretos.</div>
+    <form method="POST" action="/login">
+      <div class="field">
+        <label>E-mail</label>
+        <input type="email" name="email" placeholder="seu@email.com" required autofocus>
+      </div>
+      <div class="field">
+        <label>Senha</label>
+        <input type="password" name="senha" placeholder="••••••••" required>
+      </div>
+      <button class="btn" type="submit">Entrar</button>
+    </form>
+  </div>
+</div>
+<script>
+  if (new URLSearchParams(location.search).get('erro'))
+    document.getElementById('erro').style.display = 'block';
+</script>
+</body>
+</html>
