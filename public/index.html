@@ -191,7 +191,7 @@
             <input type="text" id="vendedor" placeholder="Nome do vendedor">
           </div>
           <div class="field">
-            <label>Meta <span class="req">*</span></label>
+            <label id="meta-label">Meta <span class="req">*</span></label>
             <input type="text" id="meta" placeholder="R$ 0,00">
           </div>
         </div>
@@ -262,6 +262,7 @@
     modoGrupo = el.dataset.value === 'grupo';
     document.getElementById('individual-fields').style.display = modoGrupo ? 'none' : 'grid';
     document.getElementById('grupo-fields').style.display = modoGrupo ? 'block' : 'none';
+    document.getElementById('meta-label').firstChild.textContent = modoGrupo ? 'Meta do grupo ' : 'Meta ';
     if (modoGrupo) {
       grupoRows = [{ cnpj: '', razao_social: '' }];
       renderGrupoRows();
