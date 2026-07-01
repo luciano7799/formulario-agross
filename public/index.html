@@ -77,6 +77,21 @@
   }
   .btn-add:hover { background: #4338ca; }
 
+  .toggle-grid { grid-template-columns: repeat(2, 1fr); }
+  .grupo-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
+  .grupo-row input { flex: 1; }
+  .btn-remove-row {
+    background: #fee2e2; color: #dc2626; border: none; border-radius: 6px;
+    width: 30px; height: 30px; flex-shrink: 0; cursor: pointer; font-size: 15px;
+  }
+  .btn-remove-row:hover { opacity: 0.75; }
+  .btn-add-cnpj {
+    width: 100%; padding: 8px; background: #ede9fe; color: #4f46e5;
+    border: none; border-radius: 7px; font-size: 12px; font-weight: 600;
+    cursor: pointer; margin-bottom: 15px;
+  }
+  .btn-add-cnpj:hover { background: #e0d9fc; }
+
   /* ── Coluna direita: tabela ── */
   .table-col { flex: 1; min-width: 0; display: flex; flex-direction: column; }
   .table-card { background: #fff; border-radius: 14px; box-shadow: 0 4px 20px rgba(0,0,0,0.09); overflow: hidden; display: flex; flex-direction: column; flex: 1; }
@@ -141,7 +156,15 @@
         </div>
       </div>
       <div class="card-body">
-        <div class="row-2">
+        <div class="field">
+          <label>Tipo de cadastro <span class="req">*</span></label>
+          <div class="radio-grid toggle-grid" id="modo-grid">
+            <div class="radio-item selected" data-value="individual" onclick="selecionarModo(this)">Individual</div>
+            <div class="radio-item" data-value="grupo" onclick="selecionarModo(this)">Grupo (vários CNPJs)</div>
+          </div>
+        </div>
+
+        <div class="row-2" id="individual-fields">
           <div class="field">
             <label>CNPJ <span class="req">*</span></label>
             <input type="text" id="cnpj" placeholder="00.000.000/0000-00" maxlength="18">
@@ -150,6 +173,11 @@
             <label>Razão Social <span class="req">*</span></label>
             <input type="text" id="razao_social" placeholder="Nome da empresa">
           </div>
+        </div>
+
+        <div id="grupo-fields" style="display:none;">
+          <div id="grupo-rows"></div>
+          <button type="button" class="btn-add-cnpj" onclick="adicionarLinhaGrupo()">+ Adicionar CNPJ</button>
         </div>
 
         <div class="field">
