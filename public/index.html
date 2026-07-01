@@ -342,12 +342,41 @@
     const percentual_estimado = document.getElementById('percentual_estimado').value
                                   ? Number(document.getElementById('percentual_estimado').value) : null;
 
-    if (!cnpj || !razao_social || !filial || !vendedor || !meta) {
+    if (!filial || !vendedor || !meta) {
+      alert('Preencha todos os campos obrigatórios (Filial, Vendedor e Meta).');
+      return;
+    }
+
+    const compartilhado = { filial, vendedor, meta, fornecedores: fornecedores || null, percentual_estimado };
+
+    if (modoGrupo) {
+      const validas   = grupoRows.filter(r => r.cnpj.trim() && r.razao_social.trim());
+      const invalidas = grupoRows.filter(r => (r.cnpj.trim() && !r.razao_social.trim()) || (!r.cnpj.trim() && r.razao_social.trim()));
+
+      if (invalidas.length > 0) {
+        alert('Cada linha do grupo precisa ter CNPJ e Razão Social preenchidos.');
+        return;
+      }
+      if (validas.length === 0) {
+        alert('Preencha ao menos um CNPJ e Razão Social do grupo.');
+        return;
+      }
+
+      validas.forEach(r => {
+        itens.push({ ...compartilhado, cnpj: r.cnpj.trim(), razao_social: r.razao_social.trim(), id: null, status: 'pendente' });
+      });
+
+      limparForm();
+      renderTabela();
+      return;
+    }
+
+    if (!cnpj || !razao_social) {
       alert('Preencha todos os campos obrigatórios (CNPJ, Razão Social, Filial, Vendedor e Meta).');
       return;
     }
 
-    const dados = { cnpj, razao_social, filial, vendedor, meta, fornecedores: fornecedores || null, percentual_estimado };
+    const dados = { ...compartilhado, cnpj, razao_social };
 
     if (editando && editando.tipo === 'salvo') {
       salvarEdicao(editando.id, dados);
@@ -383,6 +412,9 @@
   }
 
   function editarItem(pos) {
+    if (modoGrupo) {
+      document.querySelector('#modo-grid .radio-item[data-value="individual"]').click();
+    }
     const item = itens[pos];
     document.getElementById('cnpj').value            = item.cnpj;
     document.getElementById('razao_social').value    = item.razao_social;
@@ -499,6 +531,10 @@
     ['cnpj','razao_social','vendedor','meta','fornecedores','percentual_estimado']
       .forEach(id => document.getElementById(id).value = '');
     document.querySelectorAll('#filial-grid .radio-item').forEach(r => r.classList.remove('selected'));
+    if (modoGrupo) {
+      grupoRows = [{ cnpj: '', razao_social: '' }];
+      renderGrupoRows();
+    }
   }
 
   function hideMessages() {
