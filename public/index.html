@@ -10,14 +10,28 @@
     font-family: 'Segoe UI', system-ui, sans-serif;
     background: #eef0f4;
     height: 100vh;
-    padding: 16px;
+    display: flex; flex-direction: column;
     overflow: hidden;
   }
+  /* ── Topbar ── */
+  .topbar {
+    background: #1a1a2e; height: 52px; padding: 0 20px;
+    display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+  }
+  .topbar-left { display: flex; align-items: center; gap: 10px; }
+  .topbar-logo { width: 30px; height: 30px; background: #4f46e5; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 15px; }
+  .topbar-title { color: #fff; font-size: 14px; font-weight: 700; }
+  .topbar-user { color: rgba(255,255,255,0.55); font-size: 12px; }
+  .btn-logout {
+    background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.7);
+    border: 1px solid rgba(255,255,255,0.12); border-radius: 6px;
+    padding: 6px 14px; font-size: 12px; cursor: pointer; transition: background 0.15s;
+  }
+  .btn-logout:hover { background: rgba(255,255,255,0.15); }
+
   .layout {
-    display: flex;
-    gap: 16px;
-    align-items: stretch;
-    height: 100%;
+    display: flex; gap: 16px; align-items: stretch;
+    flex: 1; min-height: 0; padding: 16px;
   }
 
   /* ── Coluna esquerda: formulário ── */
@@ -55,7 +69,6 @@
   }
   .radio-item:hover { border-color: #4f46e5; color: #4f46e5; background: #f5f3ff; }
   .radio-item.selected { border-color: #4f46e5; background: #4f46e5; color: #fff; }
-  .radio-item input { display: none; }
   .btn-add {
     width: 100%; padding: 10px;
     background: #4f46e5; color: #fff; border: none;
@@ -80,6 +93,9 @@
   tbody tr { border-bottom: 1px solid #f0f2f5; transition: background 0.15s; }
   tbody tr:hover { background: #fafbff; }
   tbody td { padding: 10px 13px; color: #333; vertical-align: middle; }
+  .filial-badge { display: inline-block; background: #ede9fe; color: #4f46e5; border-radius: 20px; padding: 2px 10px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+  .status-pend { display: inline-block; background: #fef3c7; color: #92400e; border-radius: 20px; padding: 2px 9px; font-size: 10px; font-weight: 700; }
+  .status-salvo { display: inline-block; background: #d1fae5; color: #065f46; border-radius: 20px; padding: 2px 9px; font-size: 10px; font-weight: 700; }
   .td-actions { display: flex; gap: 5px; }
   .btn-edit { background: #ede9fe; color: #4f46e5; border: none; border-radius: 5px; padding: 4px 10px; font-size: 11px; font-weight: 600; cursor: pointer; }
   .btn-edit:hover { opacity: 0.75; }
@@ -100,6 +116,18 @@
 </style>
 </head>
 <body>
+
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="topbar-logo">📋</div>
+    <span class="topbar-title">Alavanca AgRoss</span>
+    <span class="topbar-user" id="topbar-user"></span>
+  </div>
+  <form method="POST" action="/logout" style="margin:0">
+    <button class="btn-logout" type="submit">Sair</button>
+  </form>
+</div>
+
 <div class="layout">
 
   <!-- ── Formulário ── -->
@@ -126,16 +154,7 @@
 
         <div class="field">
           <label>Filial <span class="req">*</span></label>
-          <div class="radio-grid" id="filial-grid">
-            <div class="radio-item" data-value="Paulínia"    onclick="selecionarFilial(this)">Paulínia</div>
-            <div class="radio-item" data-value="Pouso Alegre" onclick="selecionarFilial(this)">Pouso Alegre</div>
-            <div class="radio-item" data-value="Anápolis"   onclick="selecionarFilial(this)">Anápolis</div>
-            <div class="radio-item" data-value="Sete Lagoas" onclick="selecionarFilial(this)">Sete Lagoas</div>
-            <div class="radio-item" data-value="Lins"       onclick="selecionarFilial(this)">Lins</div>
-            <div class="radio-item" data-value="Petrolina"  onclick="selecionarFilial(this)">Petrolina</div>
-            <div class="radio-item" data-value="Cariacia"   onclick="selecionarFilial(this)">Cariacia</div>
-            <div class="radio-item" data-value="Carazinho"  onclick="selecionarFilial(this)">Carazinho</div>
-          </div>
+          <div class="radio-grid" id="filial-grid"></div>
         </div>
 
         <div class="row-2">
@@ -168,7 +187,7 @@
   <div class="table-col">
     <div class="table-card">
       <div class="table-header">
-        <h2>Itens adicionados</h2>
+        <h2>Metas da filial</h2>
         <span class="badge" id="badge">0</span>
       </div>
       <div class="table-wrap">
@@ -183,12 +202,13 @@
               <th>Meta</th>
               <th>% Est.</th>
               <th>Fornecedores</th>
+              <th>Status</th>
               <th></th>
             </tr>
           </thead>
           <tbody id="tbody"></tbody>
         </table>
-        <div class="empty-state" id="empty-state">Nenhum item adicionado ainda.</div>
+        <div class="empty-state" id="empty-state">Nenhuma meta ainda.</div>
       </div>
       <div class="table-footer">
         <div class="alert alert-success" id="msg-success">✓ Enviado com sucesso!</div>
@@ -200,8 +220,39 @@
 
 </div>
 <script>
+  // itens = registros salvos (com id) + pendentes (id null).
   let itens = [];
-  let editandoIdx = null;
+  let filiaisGerente = [];
+  let editando = null; // { tipo: 'pendente', idx } ou { tipo: 'salvo', id }
+
+  async function init() {
+    try {
+      const me = await (await fetch('/api/gerente/me')).json();
+      document.getElementById('topbar-user').textContent = me.nome;
+      filiaisGerente = me.filiais || [];
+      renderFilialGrid();
+      await carregarMetas();
+    } catch {
+      window.location.href = '/login';
+    }
+  }
+
+  function renderFilialGrid() {
+    document.getElementById('filial-grid').innerHTML = filiaisGerente.map(f => `
+      <div class="radio-item" data-value="${f}" onclick="selecionarFilial(this)">${f}</div>
+    `).join('');
+  }
+
+  async function carregarMetas() {
+    const salvos = await (await fetch('/api/minhas-metas')).json();
+    const pendentes = itens.filter(i => i.status === 'pendente');
+    itens = salvos.map(r => ({
+      id: r.id, cnpj: r.cnpj, razao_social: r.razao_social, filial: r.filial,
+      vendedor: r.vendedor, meta: r.meta, fornecedores: r.fornecedores,
+      percentual_estimado: r.percentual_estimado, status: 'salvo'
+    })).concat(pendentes);
+    renderTabela();
+  }
 
   function adicionarItem() {
     const cnpj                = document.getElementById('cnpj').value.trim();
@@ -219,43 +270,74 @@
       return;
     }
 
-    const item = { cnpj, razao_social, filial, vendedor, meta, fornecedores: fornecedores || null, percentual_estimado };
+    const dados = { cnpj, razao_social, filial, vendedor, meta, fornecedores: fornecedores || null, percentual_estimado };
 
-    if (editandoIdx !== null) {
-      itens[editandoIdx] = item;
-      editandoIdx = null;
+    if (editando && editando.tipo === 'salvo') {
+      salvarEdicao(editando.id, dados);
+      return;
+    }
+    if (editando && editando.tipo === 'pendente') {
+      itens[editando.idx] = { ...dados, id: null, status: 'pendente' };
+      editando = null;
       document.getElementById('btn-add').textContent = '+ Adicionar';
     } else {
-      itens.push(item);
+      itens.push({ ...dados, id: null, status: 'pendente' });
     }
 
     limparForm();
     renderTabela();
   }
 
-  function editarItem(idx) {
-    const item = itens[idx];
+  async function salvarEdicao(id, dados) {
+    const res = await fetch('/api/minhas-metas/' + id, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dados)
+    });
+    if (res.ok) {
+      editando = null;
+      document.getElementById('btn-add').textContent = '+ Adicionar';
+      limparForm();
+      await carregarMetas();
+    } else {
+      const err = await res.json().catch(() => ({}));
+      alert(err.error || 'Erro ao salvar alteração.');
+    }
+  }
+
+  function editarItem(pos) {
+    const item = itens[pos];
     document.getElementById('cnpj').value            = item.cnpj;
     document.getElementById('razao_social').value    = item.razao_social;
     document.getElementById('vendedor').value        = item.vendedor;
     document.getElementById('fornecedores').value    = item.fornecedores || '';
-    document.getElementById('percentual_estimado').value = item.percentual_estimado || '';
+    document.getElementById('percentual_estimado').value = item.percentual_estimado ?? '';
     document.querySelectorAll('#filial-grid .radio-item').forEach(el => {
       el.classList.toggle('selected', el.dataset.value === item.filial);
     });
     document.getElementById('meta').value = formatarMoeda(Math.round(item.meta * 100));
-    editandoIdx = idx;
+    editando = item.status === 'salvo' ? { tipo: 'salvo', id: item.id } : { tipo: 'pendente', idx: pos };
     document.getElementById('btn-add').textContent = '✓ Salvar alteração';
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  function removerItem(idx) {
-    itens.splice(idx, 1);
-    if (editandoIdx === idx) {
-      editandoIdx = null;
-      document.getElementById('btn-add').textContent = '+ Adicionar';
+  async function removerItem(pos) {
+    const item = itens[pos];
+    if (item.status === 'pendente') {
+      itens.splice(pos, 1);
+      if (editando && editando.tipo === 'pendente' && editando.idx === pos) {
+        editando = null;
+        document.getElementById('btn-add').textContent = '+ Adicionar';
+      }
+      renderTabela();
+      return;
     }
-    renderTabela();
+    if (!confirm('Excluir este registro permanentemente?')) return;
+    const res = await fetch('/api/minhas-metas/' + item.id, { method: 'DELETE' });
+    if (res.ok) {
+      await carregarMetas();
+    } else {
+      alert('Erro ao excluir.');
+    }
   }
 
   function renderTabela() {
@@ -264,25 +346,29 @@
     const btn   = document.getElementById('btn-submit');
     document.getElementById('badge').textContent = itens.length;
 
+    const temPendentes = itens.some(i => i.status === 'pendente');
+    btn.disabled = !temPendentes;
+
     if (itens.length === 0) {
       tbody.innerHTML = '';
       empty.style.display = 'block';
-      btn.disabled = true;
       return;
     }
     empty.style.display = 'none';
-    btn.disabled = false;
 
     tbody.innerHTML = itens.map((it, i) => `
       <tr>
         <td>${i + 1}</td>
         <td>${it.cnpj}</td>
         <td>${it.razao_social}</td>
-        <td>${it.filial}</td>
+        <td><span class="filial-badge">${it.filial}</span></td>
         <td>${it.vendedor}</td>
         <td>R$ ${it.meta.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
         <td>${it.percentual_estimado != null ? it.percentual_estimado + '%' : '-'}</td>
         <td>${it.fornecedores || '-'}</td>
+        <td>${it.status === 'pendente'
+              ? '<span class="status-pend">Pendente</span>'
+              : '<span class="status-salvo">Salvo</span>'}</td>
         <td>
           <div class="td-actions">
             <button class="btn-edit" onclick="editarItem(${i})">Editar</button>
@@ -295,6 +381,12 @@
 
   async function enviarTudo() {
     const btn = document.getElementById('btn-submit');
+    const pendentes = itens.filter(i => i.status === 'pendente').map(i => ({
+      cnpj: i.cnpj, razao_social: i.razao_social, filial: i.filial,
+      vendedor: i.vendedor, meta: i.meta, fornecedores: i.fornecedores,
+      percentual_estimado: i.percentual_estimado
+    }));
+    if (pendentes.length === 0) return;
     btn.disabled = true;
     btn.textContent = 'Enviando...';
     hideMessages();
@@ -303,12 +395,12 @@
       const res = await fetch('/api/formulario', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ itens })
+        body: JSON.stringify({ itens: pendentes })
       });
       const data = await res.json();
       if (data.success) {
-        itens = [];
-        renderTabela();
+        itens = itens.filter(i => i.status !== 'pendente');
+        await carregarMetas();
         document.getElementById('msg-success').style.display = 'block';
       } else {
         showError(data.error || 'Erro desconhecido.');
@@ -316,8 +408,8 @@
     } catch {
       showError('Não foi possível conectar ao servidor.');
     } finally {
-      btn.disabled = itens.length === 0;
       btn.textContent = 'Enviar Formulário';
+      renderTabela();
     }
   }
 
@@ -360,7 +452,7 @@
     e.target.value = v;
   });
 
-  renderTabela();
+  init();
 </script>
 </body>
 </html>
