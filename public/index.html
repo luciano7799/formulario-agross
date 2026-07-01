@@ -77,7 +77,6 @@
   }
   .btn-add:hover { background: #4338ca; }
 
-  .toggle-grid { grid-template-columns: repeat(2, 1fr); }
   .grupo-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
   .grupo-row input { flex: 1; }
   .btn-remove-row {
@@ -156,15 +155,7 @@
         </div>
       </div>
       <div class="card-body">
-        <div class="field">
-          <label>Tipo de cadastro <span class="req">*</span></label>
-          <div class="radio-grid toggle-grid" id="modo-grid">
-            <div class="radio-item selected" data-value="individual" onclick="selecionarModo(this)">Individual</div>
-            <div class="radio-item" data-value="grupo" onclick="selecionarModo(this)">Grupo (vários CNPJs)</div>
-          </div>
-        </div>
-
-        <div class="row-2" id="individual-fields">
+        <div class="row-2">
           <div class="field">
             <label>CNPJ <span class="req">*</span></label>
             <input type="text" id="cnpj" placeholder="00.000.000/0000-00" maxlength="18">
@@ -175,10 +166,8 @@
           </div>
         </div>
 
-        <div id="grupo-fields" style="display:none;">
-          <div id="grupo-rows"></div>
-          <button type="button" class="btn-add-cnpj" onclick="adicionarLinhaGrupo()">+ Adicionar CNPJ</button>
-        </div>
+        <div id="cnpj-extra-rows"></div>
+        <button type="button" class="btn-add-cnpj" onclick="adicionarLinhaCnpj()">+ Adicionar outro CNPJ (mesmo grupo)</button>
 
         <div class="field">
           <label>Filial <span class="req">*</span></label>
@@ -253,28 +242,14 @@
   let filiaisGerente = [];
   let editando = null; // { tipo: 'pendente', idx } ou { tipo: 'salvo', id }
 
-  let modoGrupo = false;
-  let grupoRows = [{ cnpj: '', razao_social: '' }];
+  let cnpjExtras = [];
 
-  function selecionarModo(el) {
-    document.querySelectorAll('#modo-grid .radio-item').forEach(r => r.classList.remove('selected'));
-    el.classList.add('selected');
-    modoGrupo = el.dataset.value === 'grupo';
-    document.getElementById('individual-fields').style.display = modoGrupo ? 'none' : 'grid';
-    document.getElementById('grupo-fields').style.display = modoGrupo ? 'block' : 'none';
-    document.getElementById('meta-label').firstChild.textContent = modoGrupo ? 'Meta do grupo ' : 'Meta ';
-    if (modoGrupo) {
-      grupoRows = [{ cnpj: '', razao_social: '' }];
-      renderGrupoRows();
-    }
-  }
-
-  function renderGrupoRows() {
-    document.getElementById('grupo-rows').innerHTML = grupoRows.map((row, i) => `
+  function renderCnpjExtras() {
+    document.getElementById('cnpj-extra-rows').innerHTML = cnpjExtras.map((row, i) => `
       <div class="grupo-row">
         <input type="text" class="grupo-cnpj" placeholder="CNPJ" maxlength="18" data-idx="${i}" value="${row.cnpj}">
         <input type="text" class="grupo-razao" placeholder="Razão Social" data-idx="${i}" value="${row.razao_social}">
-        ${grupoRows.length > 1 ? `<button type="button" class="btn-remove-row" onclick="removerLinhaGrupo(${i})">×</button>` : ''}
+        <button type="button" class="btn-remove-row" onclick="removerLinhaCnpj(${i})">×</button>
       </div>
     `).join('');
 
@@ -282,25 +257,26 @@
       el.addEventListener('input', function(e) {
         const v = formatarCNPJ(e.target.value);
         e.target.value = v;
-        grupoRows[Number(e.target.dataset.idx)].cnpj = v;
+        cnpjExtras[Number(e.target.dataset.idx)].cnpj = v;
       });
     });
     document.querySelectorAll('.grupo-razao').forEach(el => {
       el.addEventListener('input', function(e) {
-        grupoRows[Number(e.target.dataset.idx)].razao_social = e.target.value;
+        cnpjExtras[Number(e.target.dataset.idx)].razao_social = e.target.value;
       });
     });
+
+    document.getElementById('meta-label').firstChild.textContent = cnpjExtras.length > 0 ? 'Meta do grupo ' : 'Meta ';
   }
 
-  function adicionarLinhaGrupo() {
-    grupoRows.push({ cnpj: '', razao_social: '' });
-    renderGrupoRows();
+  function adicionarLinhaCnpj() {
+    cnpjExtras.push({ cnpj: '', razao_social: '' });
+    renderCnpjExtras();
   }
 
-  function removerLinhaGrupo(idx) {
-    if (grupoRows.length <= 1) return;
-    grupoRows.splice(idx, 1);
-    renderGrupoRows();
+  function removerLinhaCnpj(idx) {
+    cnpjExtras.splice(idx, 1);
+    renderCnpjExtras();
   }
 
   async function init() {
@@ -343,40 +319,19 @@
     const percentual_estimado = document.getElementById('percentual_estimado').value
                                   ? Number(document.getElementById('percentual_estimado').value) : null;
 
-    if (!filial || !vendedor || !meta) {
-      alert('Preencha todos os campos obrigatórios (Filial, Vendedor e Meta).');
-      return;
-    }
-
-    const compartilhado = { filial, vendedor, meta, fornecedores: fornecedores || null, percentual_estimado };
-
-    if (modoGrupo) {
-      const validas   = grupoRows.filter(r => r.cnpj.trim() && r.razao_social.trim());
-      const invalidas = grupoRows.filter(r => (r.cnpj.trim() && !r.razao_social.trim()) || (!r.cnpj.trim() && r.razao_social.trim()));
-
-      if (invalidas.length > 0) {
-        alert('Cada linha do grupo precisa ter CNPJ e Razão Social preenchidos.');
-        return;
-      }
-      if (validas.length === 0) {
-        alert('Preencha ao menos um CNPJ e Razão Social do grupo.');
-        return;
-      }
-
-      validas.forEach(r => {
-        itens.push({ ...compartilhado, cnpj: r.cnpj.trim(), razao_social: r.razao_social.trim(), id: null, status: 'pendente' });
-      });
-
-      limparForm();
-      renderTabela();
-      return;
-    }
-
-    if (!cnpj || !razao_social) {
+    if (!cnpj || !razao_social || !filial || !vendedor || !meta) {
       alert('Preencha todos os campos obrigatórios (CNPJ, Razão Social, Filial, Vendedor e Meta).');
       return;
     }
 
+    const extrasInvalidas = cnpjExtras.filter(r => (r.cnpj.trim() && !r.razao_social.trim()) || (!r.cnpj.trim() && r.razao_social.trim()));
+    if (extrasInvalidas.length > 0) {
+      alert('Cada CNPJ adicional precisa ter a Razão Social preenchida.');
+      return;
+    }
+    const extrasValidas = cnpjExtras.filter(r => r.cnpj.trim() && r.razao_social.trim());
+
+    const compartilhado = { filial, vendedor, meta, fornecedores: fornecedores || null, percentual_estimado };
     const dados = { ...compartilhado, cnpj, razao_social };
 
     if (editando && editando.tipo === 'salvo') {
@@ -389,6 +344,9 @@
       document.getElementById('btn-add').textContent = '+ Adicionar';
     } else {
       itens.push({ ...dados, id: null, status: 'pendente' });
+      extrasValidas.forEach(r => {
+        itens.push({ ...compartilhado, cnpj: r.cnpj.trim(), razao_social: r.razao_social.trim(), id: null, status: 'pendente' });
+      });
     }
 
     limparForm();
@@ -413,9 +371,8 @@
   }
 
   function editarItem(pos) {
-    if (modoGrupo) {
-      document.querySelector('#modo-grid .radio-item[data-value="individual"]').click();
-    }
+    cnpjExtras = [];
+    renderCnpjExtras();
     const item = itens[pos];
     document.getElementById('cnpj').value            = item.cnpj;
     document.getElementById('razao_social').value    = item.razao_social;
@@ -532,10 +489,8 @@
     ['cnpj','razao_social','vendedor','meta','fornecedores','percentual_estimado']
       .forEach(id => document.getElementById(id).value = '');
     document.querySelectorAll('#filial-grid .radio-item').forEach(r => r.classList.remove('selected'));
-    if (modoGrupo) {
-      grupoRows = [{ cnpj: '', razao_social: '' }];
-      renderGrupoRows();
-    }
+    cnpjExtras = [];
+    renderCnpjExtras();
   }
 
   function hideMessages() {
