@@ -253,6 +253,55 @@
   let filiaisGerente = [];
   let editando = null; // { tipo: 'pendente', idx } ou { tipo: 'salvo', id }
 
+  let modoGrupo = false;
+  let grupoRows = [{ cnpj: '', razao_social: '' }];
+
+  function selecionarModo(el) {
+    document.querySelectorAll('#modo-grid .radio-item').forEach(r => r.classList.remove('selected'));
+    el.classList.add('selected');
+    modoGrupo = el.dataset.value === 'grupo';
+    document.getElementById('individual-fields').style.display = modoGrupo ? 'none' : 'grid';
+    document.getElementById('grupo-fields').style.display = modoGrupo ? 'block' : 'none';
+    if (modoGrupo) {
+      grupoRows = [{ cnpj: '', razao_social: '' }];
+      renderGrupoRows();
+    }
+  }
+
+  function renderGrupoRows() {
+    document.getElementById('grupo-rows').innerHTML = grupoRows.map((row, i) => `
+      <div class="grupo-row">
+        <input type="text" class="grupo-cnpj" placeholder="CNPJ" maxlength="18" data-idx="${i}" value="${row.cnpj}">
+        <input type="text" class="grupo-razao" placeholder="Razão Social" data-idx="${i}" value="${row.razao_social}">
+        ${grupoRows.length > 1 ? `<button type="button" class="btn-remove-row" onclick="removerLinhaGrupo(${i})">×</button>` : ''}
+      </div>
+    `).join('');
+
+    document.querySelectorAll('.grupo-cnpj').forEach(el => {
+      el.addEventListener('input', function(e) {
+        const v = formatarCNPJ(e.target.value);
+        e.target.value = v;
+        grupoRows[Number(e.target.dataset.idx)].cnpj = v;
+      });
+    });
+    document.querySelectorAll('.grupo-razao').forEach(el => {
+      el.addEventListener('input', function(e) {
+        grupoRows[Number(e.target.dataset.idx)].razao_social = e.target.value;
+      });
+    });
+  }
+
+  function adicionarLinhaGrupo() {
+    grupoRows.push({ cnpj: '', razao_social: '' });
+    renderGrupoRows();
+  }
+
+  function removerLinhaGrupo(idx) {
+    if (grupoRows.length <= 1) return;
+    grupoRows.splice(idx, 1);
+    renderGrupoRows();
+  }
+
   async function init() {
     try {
       const me = await (await fetch('/api/gerente/me')).json();
@@ -471,13 +520,17 @@
     e.target.value = digits ? formatarMoeda(parseInt(digits, 10)) : '';
   });
 
-  document.getElementById('cnpj').addEventListener('input', function(e) {
-    let v = e.target.value.replace(/\D/g, '').slice(0, 14);
+  function formatarCNPJ(value) {
+    let v = value.replace(/\D/g, '').slice(0, 14);
     if      (v.length > 12) v = v.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{0,2})/, '$1.$2.$3/$4-$5');
     else if (v.length > 8)  v = v.replace(/^(\d{2})(\d{3})(\d{3})(\d{0,4})/, '$1.$2.$3/$4');
     else if (v.length > 5)  v = v.replace(/^(\d{2})(\d{3})(\d{0,3})/, '$1.$2.$3');
     else if (v.length > 2)  v = v.replace(/^(\d{2})(\d{0,3})/, '$1.$2');
-    e.target.value = v;
+    return v;
+  }
+
+  document.getElementById('cnpj').addEventListener('input', function(e) {
+    e.target.value = formatarCNPJ(e.target.value);
   });
 
   init();
