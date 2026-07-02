@@ -100,9 +100,10 @@
   }
   .btn-add:hover { background: #4338ca; }
 
-  .grupo-row { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; margin-bottom: 13px; }
+  .row-cnpj { display: grid; grid-template-columns: 2fr 2fr 1fr; gap: 13px; }
+  .grupo-row { display: grid; grid-template-columns: 2fr 2fr 1fr; gap: 13px; margin-bottom: 13px; }
   .grupo-razao-wrap { position: relative; }
-  .grupo-razao-wrap .grupo-razao { padding-right: 38px; }
+  .grupo-razao-wrap input { padding-right: 38px; }
   .btn-remove-row {
     position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
     background: #fee2e2; color: #dc2626; border: none; border-radius: 6px;
@@ -227,7 +228,7 @@
           <label>Nome do grupo <span class="req">*</span></label>
           <input type="text" id="grupo" placeholder="Ex: Rede Verde Campo">
         </div>
-        <div class="row-2">
+        <div class="row-cnpj">
           <div class="field combo-wrap">
             <label>CNPJ <span class="req">*</span></label>
             <input type="text" id="cnpj" placeholder="00.000.000/0000-00" maxlength="18" autocomplete="off">
@@ -236,6 +237,10 @@
           <div class="field">
             <label>Razão Social <span class="req">*</span></label>
             <input type="text" id="razao_social" placeholder="Nome da empresa">
+          </div>
+          <div class="field">
+            <label>Meta <span class="req">*</span></label>
+            <input type="text" id="meta" placeholder="R$ 0,00">
           </div>
         </div>
 
@@ -247,15 +252,9 @@
           <div class="radio-grid" id="filial-grid"></div>
         </div>
 
-        <div class="row-2">
-          <div class="field">
-            <label>Vendedor <span class="req">*</span></label>
-            <input type="text" id="vendedor" placeholder="Nome do vendedor">
-          </div>
-          <div class="field">
-            <label id="meta-label">Meta <span class="req">*</span></label>
-            <input type="text" id="meta" placeholder="R$ 0,00">
-          </div>
+        <div class="field">
+          <label>Vendedor <span class="req">*</span></label>
+          <input type="text" id="vendedor" placeholder="Nome do vendedor">
         </div>
 
         <div class="field">
@@ -326,8 +325,9 @@
           <input type="text" class="grupo-cnpj" placeholder="CNPJ" maxlength="18" data-idx="${i}" value="${row.cnpj}" autocomplete="off">
           <div class="combo-dd"></div>
         </div>
+        <input type="text" class="grupo-razao" placeholder="Razão Social" data-idx="${i}" value="${row.razao_social}">
         <div class="grupo-razao-wrap">
-          <input type="text" class="grupo-razao" placeholder="Razão Social" data-idx="${i}" value="${row.razao_social}">
+          <input type="text" class="grupo-meta" placeholder="R$ 0,00" data-idx="${i}" value="${row.meta}">
           <button type="button" class="btn-remove-row" onclick="removerLinhaCnpj(${i})">×</button>
         </div>
       </div>
@@ -360,15 +360,21 @@
         cnpjExtras[Number(e.target.dataset.idx)].razao_social = e.target.value;
       });
     });
+    document.querySelectorAll('.grupo-meta').forEach(el => {
+      el.addEventListener('input', function(e) {
+        const digits = e.target.value.replace(/\D/g, '').slice(0, 13);
+        e.target.value = digits ? formatarMoeda(parseInt(digits, 10)) : '';
+        cnpjExtras[Number(e.target.dataset.idx)].meta = e.target.value;
+      });
+    });
 
     const modoGrupo = cnpjExtras.length > 0;
-    document.getElementById('meta-label').firstChild.textContent = modoGrupo ? 'Meta do grupo ' : 'Meta ';
     document.getElementById('grupo-field').style.display = modoGrupo ? 'block' : 'none';
     if (!modoGrupo) document.getElementById('grupo').value = '';
   }
 
   function adicionarLinhaCnpj() {
-    cnpjExtras.push({ cnpj: '', razao_social: '' });
+    cnpjExtras.push({ cnpj: '', razao_social: '', meta: '' });
     renderCnpjExtras();
   }
 
@@ -477,20 +483,22 @@
       return;
     }
 
-    const extrasInvalidas = cnpjExtras.filter(r => (r.cnpj.trim() && !r.razao_social.trim()) || (!r.cnpj.trim() && r.razao_social.trim()));
+    const metaExtra = r => { const d = (r.meta || '').replace(/\D/g, ''); return d ? Number(d) / 100 : null; };
+    const preenchida = r => r.cnpj.trim() || r.razao_social.trim() || (r.meta || '').trim();
+    const extrasInvalidas = cnpjExtras.filter(r => preenchida(r) && !(r.cnpj.trim() && r.razao_social.trim() && metaExtra(r)));
     if (extrasInvalidas.length > 0) {
-      alert('Cada CNPJ adicional precisa ter a Razão Social preenchida.');
+      alert('Cada CNPJ adicional precisa ter CNPJ, Razão Social e Meta preenchidos.');
       return;
     }
-    const extrasValidas = cnpjExtras.filter(r => r.cnpj.trim() && r.razao_social.trim());
+    const extrasValidas = cnpjExtras.filter(r => r.cnpj.trim() && r.razao_social.trim() && metaExtra(r));
 
-    const compartilhado = { filial, vendedor, meta, fornecedores: fornecedores || null, percentual_estimado, grupo: grupo || null };
-    const dados = { ...compartilhado, cnpj, razao_social };
+    const compartilhado = { filial, vendedor, fornecedores: fornecedores || null, percentual_estimado, grupo: grupo || null };
+    const dados = { ...compartilhado, meta, cnpj, razao_social };
 
     if (editando && editando.tipo === 'salvo') {
       // CNPJs extras informados durante a edição entram como novos registros do grupo.
       const novos = extrasValidas.map(r => ({
-        ...compartilhado, cnpj: r.cnpj.trim(), razao_social: r.razao_social.trim()
+        ...compartilhado, meta: metaExtra(r), cnpj: r.cnpj.trim(), razao_social: r.razao_social.trim()
       }));
       salvarEdicao(editando.id, dados, novos);
       return;
@@ -502,7 +510,7 @@
     } else {
       itens.push({ ...dados, id: null, status: 'pendente' });
       extrasValidas.forEach(r => {
-        itens.push({ ...compartilhado, cnpj: r.cnpj.trim(), razao_social: r.razao_social.trim(), id: null, status: 'pendente' });
+        itens.push({ ...compartilhado, meta: metaExtra(r), cnpj: r.cnpj.trim(), razao_social: r.razao_social.trim(), id: null, status: 'pendente' });
       });
     }
 
@@ -590,16 +598,8 @@
 
   function renderStats() {
     const salvos = itens.filter(i => i.status === 'salvo');
-    // Meta do grupo conta uma única vez; CNPJs sem grupo contam individualmente.
-    const gruposVistos = new Set();
-    let totalMeta = 0;
-    for (const i of salvos) {
-      if (i.grupo) {
-        if (gruposVistos.has(i.grupo)) continue;
-        gruposVistos.add(i.grupo);
-      }
-      totalMeta += i.meta;
-    }
+    // Meta agora é individual por cliente: o total é a soma de todos os registros.
+    const totalMeta = salvos.reduce((s, i) => s + i.meta, 0);
     document.getElementById('stat-total').textContent = salvos.length;
     document.getElementById('stat-meta-total').textContent =
       'R$ ' + totalMeta.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
