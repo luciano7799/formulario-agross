@@ -261,7 +261,6 @@
         <table>
           <thead>
             <tr>
-              <th>#</th>
               <th>CNPJ</th>
               <th>Razão Social</th>
               <th>Grupo</th>
@@ -526,7 +525,6 @@
 
     tbody.innerHTML = itens.map((it, i) => `
       <tr>
-        <td>${i + 1}</td>
         <td>${it.cnpj}</td>
         <td>${it.razao_social}</td>
         <td>${it.grupo ? '<span class="filial-badge" style="background:#fef3c7;color:#92400e">'+it.grupo+'</span>' : '—'}</td>
