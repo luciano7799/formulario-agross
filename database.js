@@ -30,6 +30,7 @@ async function init() {
   await pool.query(`
     CREATE UNIQUE INDEX IF NOT EXISTS formularios_cnpj_idx ON formularios (cnpj)
   `);
+  await pool.query(`ALTER TABLE formularios ADD COLUMN IF NOT EXISTS grupo TEXT`);
   await pool.query(`
     CREATE TABLE IF NOT EXISTS gerentes (
       id SERIAL PRIMARY KEY,
@@ -66,8 +67,8 @@ async function seedGerentes() {
 async function inserirFormulario(dados) {
   await pool.query(
     `INSERT INTO formularios
-       (cnpj, razao_social, filial, vendedor, meta, fornecedores, percentual_estimado)
-     VALUES ($1,$2,$3,$4,$5,$6,$7)
+       (cnpj, razao_social, filial, vendedor, meta, fornecedores, percentual_estimado, grupo)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
      ON CONFLICT (cnpj) DO UPDATE SET
        razao_social        = EXCLUDED.razao_social,
        filial              = EXCLUDED.filial,
@@ -75,16 +76,18 @@ async function inserirFormulario(dados) {
        meta                = EXCLUDED.meta,
        fornecedores        = EXCLUDED.fornecedores,
        percentual_estimado = EXCLUDED.percentual_estimado,
+       grupo               = EXCLUDED.grupo,
        criado_em           = NOW()`,
     [dados.cnpj, dados.razao_social, dados.filial, dados.vendedor,
-     dados.meta, dados.fornecedores || null, dados.percentual_estimado || null]
+     dados.meta, dados.fornecedores || null, dados.percentual_estimado || null,
+     dados.grupo || null]
   );
 }
 
 async function listarFormularios() {
   const { rows } = await pool.query(`
     SELECT id, cnpj, razao_social, filial, vendedor,
-           meta::float, fornecedores, percentual_estimado::float,
+           meta::float, fornecedores, percentual_estimado::float, grupo,
            TO_CHAR(criado_em AT TIME ZONE 'America/Sao_Paulo', 'DD/MM/YYYY HH24:MI') AS criado_em
     FROM formularios
     ORDER BY id DESC
@@ -103,7 +106,7 @@ async function buscarGerentePorEmail(email) {
 async function listarMetasPorFiliais(filiais) {
   const { rows } = await pool.query(`
     SELECT id, cnpj, razao_social, filial, vendedor,
-           meta::float, fornecedores, percentual_estimado::float,
+           meta::float, fornecedores, percentual_estimado::float, grupo,
            TO_CHAR(criado_em AT TIME ZONE 'America/Sao_Paulo', 'DD/MM/YYYY HH24:MI') AS criado_em
     FROM formularios
     WHERE filial = ANY($1)
@@ -115,7 +118,7 @@ async function listarMetasPorFiliais(filiais) {
 async function buscarMetaPorId(id) {
   const { rows } = await pool.query(
     `SELECT id, cnpj, razao_social, filial, vendedor, meta::float,
-            fornecedores, percentual_estimado::float
+            fornecedores, percentual_estimado::float, grupo
      FROM formularios WHERE id = $1`,
     [id]
   );
@@ -126,10 +129,20 @@ async function atualizarMeta(id, dados) {
   await pool.query(
     `UPDATE formularios SET
        cnpj = $1, razao_social = $2, filial = $3, vendedor = $4, meta = $5,
-       fornecedores = $6, percentual_estimado = $7
-     WHERE id = $8`,
+       fornecedores = $6, percentual_estimado = $7, grupo = $8
+     WHERE id = $9`,
     [dados.cnpj, dados.razao_social, dados.filial, dados.vendedor, dados.meta,
-     dados.fornecedores || null, dados.percentual_estimado || null, id]
+     dados.fornecedores || null, dados.percentual_estimado || null,
+     dados.grupo || null, id]
+  );
+}
+
+// Propaga a meta para todos os CNPJs de um grupo, dentro das filiais do gerente.
+// A meta é um alvo único do grupo, então editar um CNPJ atualiza o grupo inteiro.
+async function propagarMetaDoGrupo(grupo, meta, filiais) {
+  await pool.query(
+    `UPDATE formularios SET meta = $1 WHERE grupo = $2 AND filial = ANY($3)`,
+    [meta, grupo, filiais]
   );
 }
 
@@ -141,5 +154,5 @@ async function excluirMeta(id) {
 module.exports = {
   pool, init, inserirFormulario, listarFormularios,
   buscarGerentePorEmail, listarMetasPorFiliais, buscarMetaPorId,
-  atualizarMeta, excluirMeta
+  atualizarMeta, propagarMetaDoGrupo, excluirMeta
 };

@@ -128,7 +128,7 @@
       <table>
         <thead>
           <tr>
-            <th>#</th><th>CNPJ</th><th>Razão Social</th><th>Filial</th>
+            <th>#</th><th>CNPJ</th><th>Razão Social</th><th>Grupo</th><th>Filial</th>
             <th>Vendedor</th><th>Meta</th><th>% Est.</th><th>Fornecedores</th><th>Enviado em</th><th></th>
           </tr>
         </thead>
@@ -147,10 +147,18 @@
 
   function renderDash(data) {
     const porFilial = {};
+    const gruposVistos = new Set();
     for (const f of data) {
       const fil = f.filial || 'Sem filial';
       if (!porFilial[fil]) porFilial[fil] = { total: 0, count: 0 };
-      porFilial[fil].total += Number(f.meta) || 0;
+      // Meta do grupo conta uma vez por filial; CNPJs sem grupo contam individualmente.
+      let contaMeta = true;
+      if (f.grupo) {
+        const key = fil + '|' + f.grupo;
+        if (gruposVistos.has(key)) contaMeta = false;
+        else gruposVistos.add(key);
+      }
+      if (contaMeta) porFilial[fil].total += Number(f.meta) || 0;
       porFilial[fil].count += 1;
     }
     const sorted = Object.entries(porFilial).sort((a, b) => b[1].total - a[1].total);
@@ -190,7 +198,7 @@
     const busca  = document.getElementById('busca').value.toLowerCase();
     const filial = document.getElementById('filtro-filial').value;
     const filtrados = todos.filter(r =>
-      (!busca  || r.cnpj.toLowerCase().includes(busca) || r.razao_social.toLowerCase().includes(busca)) &&
+      (!busca  || r.cnpj.toLowerCase().includes(busca) || r.razao_social.toLowerCase().includes(busca) || (r.grupo || '').toLowerCase().includes(busca)) &&
       (!filial || r.filial === filial)
     );
     renderizar(filtrados);
@@ -211,6 +219,7 @@
         <td>${r.id}</td>
         <td>${r.cnpj}</td>
         <td>${r.razao_social}</td>
+        <td>${r.grupo ? '<span class="filial-badge" style="background:#fef3c7;color:#92400e">'+r.grupo+'</span>' : '—'}</td>
         <td><span class="filial-badge">${r.filial}</span></td>
         <td>${r.vendedor}</td>
         <td class="meta-val">R$ ${Number(r.meta).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>

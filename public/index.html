@@ -200,6 +200,10 @@
         </div>
       </div>
       <div class="card-body">
+        <div class="field" id="grupo-field" style="display:none">
+          <label>Nome do grupo <span class="req">*</span></label>
+          <input type="text" id="grupo" placeholder="Ex: Rede Verde Campo">
+        </div>
         <div class="row-2">
           <div class="field">
             <label>CNPJ <span class="req">*</span></label>
@@ -260,6 +264,7 @@
               <th>#</th>
               <th>CNPJ</th>
               <th>Razão Social</th>
+              <th>Grupo</th>
               <th>Filial</th>
               <th>Vendedor</th>
               <th>Meta</th>
@@ -313,7 +318,10 @@
       });
     });
 
-    document.getElementById('meta-label').firstChild.textContent = cnpjExtras.length > 0 ? 'Meta do grupo ' : 'Meta ';
+    const modoGrupo = cnpjExtras.length > 0;
+    document.getElementById('meta-label').firstChild.textContent = modoGrupo ? 'Meta do grupo ' : 'Meta ';
+    document.getElementById('grupo-field').style.display = modoGrupo ? 'block' : 'none';
+    if (!modoGrupo) document.getElementById('grupo').value = '';
   }
 
   function adicionarLinhaCnpj() {
@@ -358,7 +366,7 @@
     itens = salvos.map(r => ({
       id: r.id, cnpj: r.cnpj, razao_social: r.razao_social, filial: r.filial,
       vendedor: r.vendedor, meta: r.meta, fornecedores: r.fornecedores,
-      percentual_estimado: r.percentual_estimado, status: 'salvo'
+      percentual_estimado: r.percentual_estimado, grupo: r.grupo, status: 'salvo'
     })).concat(pendentes);
     renderTabela();
   }
@@ -379,6 +387,13 @@
       return;
     }
 
+    const grupoVisivel = document.getElementById('grupo-field').style.display !== 'none';
+    const grupo = document.getElementById('grupo').value.trim();
+    if (grupoVisivel && !grupo) {
+      alert('Informe o nome do grupo.');
+      return;
+    }
+
     const extrasInvalidas = cnpjExtras.filter(r => (r.cnpj.trim() && !r.razao_social.trim()) || (!r.cnpj.trim() && r.razao_social.trim()));
     if (extrasInvalidas.length > 0) {
       alert('Cada CNPJ adicional precisa ter a Razão Social preenchida.');
@@ -386,7 +401,7 @@
     }
     const extrasValidas = cnpjExtras.filter(r => r.cnpj.trim() && r.razao_social.trim());
 
-    const compartilhado = { filial, vendedor, meta, fornecedores: fornecedores || null, percentual_estimado };
+    const compartilhado = { filial, vendedor, meta, fornecedores: fornecedores || null, percentual_estimado, grupo: grupo || null };
     const dados = { ...compartilhado, cnpj, razao_social };
 
     if (editando && editando.tipo === 'salvo') {
@@ -446,6 +461,10 @@
       el.classList.toggle('selected', el.dataset.value === item.filial);
     });
     document.getElementById('meta').value = formatarMoeda(Math.round(item.meta * 100));
+    if (item.grupo) {
+      document.getElementById('grupo-field').style.display = 'block';
+      document.getElementById('grupo').value = item.grupo;
+    }
     editando = item.status === 'salvo' ? { tipo: 'salvo', id: item.id } : { tipo: 'pendente', idx: pos };
     document.getElementById('btn-add').textContent = '✓ Salvar alteração';
   }
@@ -472,7 +491,16 @@
 
   function renderStats() {
     const salvos = itens.filter(i => i.status === 'salvo');
-    const totalMeta = salvos.reduce((soma, i) => soma + i.meta, 0);
+    // Meta do grupo conta uma única vez; CNPJs sem grupo contam individualmente.
+    const gruposVistos = new Set();
+    let totalMeta = 0;
+    for (const i of salvos) {
+      if (i.grupo) {
+        if (gruposVistos.has(i.grupo)) continue;
+        gruposVistos.add(i.grupo);
+      }
+      totalMeta += i.meta;
+    }
     document.getElementById('stat-total').textContent = salvos.length;
     document.getElementById('stat-meta-total').textContent =
       'R$ ' + totalMeta.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
@@ -501,6 +529,7 @@
         <td>${i + 1}</td>
         <td>${it.cnpj}</td>
         <td>${it.razao_social}</td>
+        <td>${it.grupo ? '<span class="filial-badge" style="background:#fef3c7;color:#92400e">'+it.grupo+'</span>' : '—'}</td>
         <td><span class="filial-badge">${it.filial}</span></td>
         <td>${it.vendedor}</td>
         <td>R$ ${it.meta.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
@@ -524,7 +553,7 @@
     const pendentes = itens.filter(i => i.status === 'pendente').map(i => ({
       cnpj: i.cnpj, razao_social: i.razao_social, filial: i.filial,
       vendedor: i.vendedor, meta: i.meta, fornecedores: i.fornecedores,
-      percentual_estimado: i.percentual_estimado
+      percentual_estimado: i.percentual_estimado, grupo: i.grupo
     }));
     if (pendentes.length === 0) return;
     btn.disabled = true;

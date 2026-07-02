@@ -8,7 +8,7 @@ const { gerenteTemFilial } = require('./auth');
 const {
   pool, init, inserirFormulario, listarFormularios,
   buscarGerentePorEmail, listarMetasPorFiliais, buscarMetaPorId,
-  atualizarMeta, excluirMeta
+  atualizarMeta, propagarMetaDoGrupo, excluirMeta
 } = require('./database');
 
 const app = express();
@@ -111,6 +111,7 @@ app.get('/api/admin/export', requireAdmin, async (req, res) => {
       '#': r.id,
       'CNPJ': r.cnpj,
       'Razão Social': r.razao_social,
+      'Grupo': r.grupo ?? '',
       'Filial': r.filial,
       'Vendedor': r.vendedor,
       'Meta (R$)': r.meta,
@@ -162,7 +163,7 @@ app.get('/api/minhas-metas', requireGerente, async (req, res) => {
 app.put('/api/minhas-metas/:id', requireGerente, async (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (isNaN(id)) return res.status(400).json({ error: 'ID inválido.' });
-  const { cnpj, razao_social, filial, vendedor, meta, fornecedores, percentual_estimado } = req.body;
+  const { cnpj, razao_social, filial, vendedor, meta, fornecedores, percentual_estimado, grupo } = req.body;
   if (!cnpj || !razao_social || !filial || !vendedor || !meta)
     return res.status(400).json({ error: 'Campos obrigatórios faltando.' });
   const gerente = req.session.gerente;
@@ -174,7 +175,10 @@ app.put('/api/minhas-metas/:id', requireGerente, async (req, res) => {
     if (!gerenteTemFilial(gerente, existente.filial))
       return res.status(403).json({ error: 'Registro fora da sua área.' });
     await atualizarMeta(id, { cnpj, razao_social, filial, vendedor, meta,
-      fornecedores: fornecedores || null, percentual_estimado: percentual_estimado || null });
+      fornecedores: fornecedores || null, percentual_estimado: percentual_estimado || null,
+      grupo: grupo || null });
+    // Meta é um alvo único do grupo: propaga o novo valor para todos os CNPJs do grupo.
+    if (grupo) await propagarMetaDoGrupo(grupo, meta, gerente.filiais);
     res.json({ success: true });
   } catch (err) {
     console.error(err);
@@ -217,7 +221,8 @@ app.post('/api/formulario', requireGerente, async (req, res) => {
         cnpj: item.cnpj, razao_social: item.razao_social, filial: item.filial,
         vendedor: item.vendedor, meta: item.meta,
         fornecedores: item.fornecedores || null,
-        percentual_estimado: item.percentual_estimado || null
+        percentual_estimado: item.percentual_estimado || null,
+        grupo: item.grupo || null
       });
     }
     res.json({ success: true });
