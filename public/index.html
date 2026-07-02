@@ -57,8 +57,8 @@
   }
 
   /* ── Coluna esquerda: formulário ── */
-  .form-col, .table-col { display: none; flex-direction: column; min-width: 0; }
-  .form-col.active, .table-col.active { display: flex; flex: 1; }
+  .form-col, .table-col, .grupos-col { display: none; flex-direction: column; min-width: 0; }
+  .form-col.active, .table-col.active, .grupos-col.active { display: flex; flex: 1; }
   .card { background: #fff; border-radius: 14px; box-shadow: 0 4px 20px rgba(0,0,0,0.09); overflow: hidden; display: flex; flex-direction: column; flex: 1; }
   .card-header {
     background: #1a1a2e; padding: 22px 26px 18px;
@@ -189,6 +189,9 @@
     <button class="nav-item" data-tab="metas" onclick="selecionarAba(this)">
       <span class="nav-icon">📊</span> Metas da filial <span class="tab-badge" id="tab-badge">0</span>
     </button>
+    <button class="nav-item" data-tab="grupos" onclick="selecionarAba(this)">
+      <span class="nav-icon">👥</span> Metas por grupo <span class="tab-badge" id="tab-badge-grupos">0</span>
+    </button>
   </nav>
   <div class="sidebar-footer">
     <span class="sidebar-user" id="topbar-user"></span>
@@ -308,6 +311,30 @@
     </div>
   </div>
 
+  <!-- ── Metas por grupo ── -->
+  <div class="grupos-col">
+    <div class="table-card">
+      <div class="table-header">
+        <h2>Metas por grupo</h2>
+        <span class="badge" id="badge-grupos">0</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Grupo</th>
+              <th>Filial</th>
+              <th>CNPJs</th>
+              <th>Meta do grupo</th>
+            </tr>
+          </thead>
+          <tbody id="grupos-tbody"></tbody>
+        </table>
+        <div class="empty-state" id="grupos-empty">Nenhum grupo cadastrado ainda.</div>
+      </div>
+    </div>
+  </div>
+
 </div>
 </main>
 <script>
@@ -401,6 +428,7 @@
     const aba = el.dataset.tab;
     document.querySelector('.form-col').classList.toggle('active', aba === 'cadastro');
     document.querySelector('.table-col').classList.toggle('active', aba === 'metas');
+    document.querySelector('.grupos-col').classList.toggle('active', aba === 'grupos');
   }
 
   function renderFilialGrid() {
@@ -605,6 +633,35 @@
       'R$ ' + totalMeta.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
   }
 
+  function renderGrupos() {
+    const grupos = new Map();
+    for (const i of itens) {
+      if (!i.grupo) continue;
+      const g = grupos.get(i.grupo) || { meta: 0, qtd: 0, filial: i.filial };
+      g.meta += i.meta;
+      g.qtd += 1;
+      grupos.set(i.grupo, g);
+    }
+    document.getElementById('tab-badge-grupos').textContent = grupos.size;
+    document.getElementById('badge-grupos').textContent = grupos.size;
+    const empty = document.getElementById('grupos-empty');
+    const tbody = document.getElementById('grupos-tbody');
+    if (grupos.size === 0) {
+      tbody.innerHTML = '';
+      empty.style.display = 'block';
+      return;
+    }
+    empty.style.display = 'none';
+    tbody.innerHTML = [...grupos.entries()].map(([nome, g]) => `
+      <tr>
+        <td><span class="filial-badge" style="background:#fef3c7;color:#92400e">${nome}</span></td>
+        <td><span class="filial-badge">${g.filial}</span></td>
+        <td>${g.qtd}</td>
+        <td><strong>R$ ${g.meta.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong></td>
+      </tr>
+    `).join('');
+  }
+
   function renderTabela() {
     const tbody = document.getElementById('tbody');
     const empty = document.getElementById('empty-state');
@@ -612,6 +669,7 @@
     document.getElementById('badge').textContent = itens.length;
     document.getElementById('tab-badge').textContent = itens.length;
     renderStats();
+    renderGrupos();
 
     const temPendentes = itens.some(i => i.status === 'pendente');
     btn.disabled = !temPendentes;
