@@ -404,7 +404,11 @@
     const dados = { ...compartilhado, cnpj, razao_social };
 
     if (editando && editando.tipo === 'salvo') {
-      salvarEdicao(editando.id, dados);
+      // CNPJs extras informados durante a edição entram como novos registros do grupo.
+      const novos = extrasValidas.map(r => ({
+        ...compartilhado, cnpj: r.cnpj.trim(), razao_social: r.razao_social.trim()
+      }));
+      salvarEdicao(editando.id, dados, novos);
       return;
     }
     if (editando && editando.tipo === 'pendente') {
@@ -429,21 +433,33 @@
     setTimeout(() => { el.style.display = 'none'; }, 3000);
   }
 
-  async function salvarEdicao(id, dados) {
+  async function salvarEdicao(id, dados, novos = []) {
     const res = await fetch('/api/minhas-metas/' + id, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(dados)
     });
-    if (res.ok) {
-      editando = null;
-      document.getElementById('btn-add').textContent = '+ Adicionar';
-      limparForm();
-      await carregarMetas();
-    } else {
+    if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       alert(err.error || 'Erro ao salvar alteração.');
+      return;
     }
+    // Cria os CNPJs adicionados ao grupo durante a edição.
+    if (novos.length > 0) {
+      const res2 = await fetch('/api/formulario', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ itens: novos })
+      });
+      if (!res2.ok) {
+        const err = await res2.json().catch(() => ({}));
+        alert(err.error || 'Erro ao adicionar os CNPJs do grupo.');
+      }
+    }
+    editando = null;
+    document.getElementById('btn-add').textContent = '+ Adicionar';
+    limparForm();
+    await carregarMetas();
   }
 
   function editarItem(pos) {
