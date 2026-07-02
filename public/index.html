@@ -29,13 +29,24 @@
   }
   .btn-logout:hover { background: rgba(255,255,255,0.15); }
 
+  .tabs { display: flex; gap: 6px; padding: 16px 16px 0; flex-shrink: 0; }
+  .tab-btn {
+    padding: 10px 20px; background: transparent; border: none;
+    border-bottom: 3px solid transparent; font-size: 13px; font-weight: 600;
+    color: #888; cursor: pointer; transition: all 0.15s;
+  }
+  .tab-btn:hover { color: #4f46e5; }
+  .tab-btn.active { color: #1a1a2e; border-bottom-color: #4f46e5; }
+  .tab-badge { background: #4f46e5; color: #fff; border-radius: 20px; padding: 1px 8px; font-size: 11px; font-weight: 700; margin-left: 6px; }
+
   .layout {
     display: flex; gap: 16px; align-items: stretch;
     flex: 1; min-height: 0; padding: 16px;
   }
 
   /* ── Coluna esquerda: formulário ── */
-  .form-col { flex: 0 0 45%; display: flex; flex-direction: column; }
+  .form-col, .table-col { display: none; flex-direction: column; min-width: 0; }
+  .form-col.active, .table-col.active { display: flex; flex: 1; }
   .card { background: #fff; border-radius: 14px; box-shadow: 0 4px 20px rgba(0,0,0,0.09); overflow: hidden; display: flex; flex-direction: column; flex: 1; }
   .card-header {
     background: #1a1a2e; padding: 22px 26px 18px;
@@ -92,7 +103,6 @@
   .btn-add-cnpj:hover { background: #e0d9fc; }
 
   /* ── Coluna direita: tabela ── */
-  .table-col { flex: 1; min-width: 0; display: flex; flex-direction: column; }
   .table-card { background: #fff; border-radius: 14px; box-shadow: 0 4px 20px rgba(0,0,0,0.09); overflow: hidden; display: flex; flex-direction: column; flex: 1; }
   .table-header {
     background: #1a1a2e; padding: 18px 24px;
@@ -142,10 +152,15 @@
   </form>
 </div>
 
+<div class="tabs">
+  <button class="tab-btn active" data-tab="cadastro" onclick="selecionarAba(this)">Cadastro</button>
+  <button class="tab-btn" data-tab="metas" onclick="selecionarAba(this)">Metas da filial <span class="tab-badge" id="tab-badge">0</span></button>
+</div>
+
 <div class="layout">
 
   <!-- ── Formulário ── -->
-  <div class="form-col">
+  <div class="form-col active">
     <div class="card">
       <div class="card-header">
         <div class="icon-box">📋</div>
@@ -195,6 +210,7 @@
           <input type="number" id="percentual_estimado" placeholder="Ex: 15" min="0" max="100">
         </div>
 
+        <div class="alert alert-success" id="msg-adicionado">✓ Salvo — confira na aba "Metas da filial".</div>
         <button class="btn-add" id="btn-add" onclick="adicionarItem()">+ Adicionar</button>
       </div>
     </div>
@@ -291,6 +307,14 @@
     }
   }
 
+  function selecionarAba(el) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
+    const aba = el.dataset.tab;
+    document.querySelector('.form-col').classList.toggle('active', aba === 'cadastro');
+    document.querySelector('.table-col').classList.toggle('active', aba === 'metas');
+  }
+
   function renderFilialGrid() {
     document.getElementById('filial-grid').innerHTML = filiaisGerente.map(f => `
       <div class="radio-item" data-value="${f}" onclick="selecionarFilial(this)">${f}</div>
@@ -349,8 +373,15 @@
       });
     }
 
+    mostrarAdicionado();
     limparForm();
     renderTabela();
+  }
+
+  function mostrarAdicionado() {
+    const el = document.getElementById('msg-adicionado');
+    el.style.display = 'block';
+    setTimeout(() => { el.style.display = 'none'; }, 3000);
   }
 
   async function salvarEdicao(id, dados) {
@@ -371,6 +402,7 @@
   }
 
   function editarItem(pos) {
+    document.querySelector('.tab-btn[data-tab="cadastro"]').click();
     cnpjExtras = [];
     renderCnpjExtras();
     const item = itens[pos];
@@ -412,6 +444,7 @@
     const empty = document.getElementById('empty-state');
     const btn   = document.getElementById('btn-submit');
     document.getElementById('badge').textContent = itens.length;
+    document.getElementById('tab-badge').textContent = itens.length;
 
     const temPendentes = itens.some(i => i.status === 'pendente');
     btn.disabled = !temPendentes;
