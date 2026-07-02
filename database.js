@@ -31,6 +31,28 @@ async function init() {
       filiais TEXT[] NOT NULL
     )
   `);
+  await seedGerentes();
+}
+
+async function seedGerentes() {
+  const { rows } = await pool.query('SELECT COUNT(*) FROM gerentes');
+  if (parseInt(rows[0].count, 10) > 0) return;
+  const dados = [
+    { nome: 'Claudio Tafner',  email: 'claudio.tafner@agross.com.br',  hash: '$2b$10$WjpnE3ouPfw5m9ywcVuv9./65EA2ushc4dotmKEpAcABZhisGr6w.', filiais: ['Paulínia'] },
+    { nome: 'Vlademir Marino', email: 'vlademir.marino@agross.com.br', hash: '$2b$10$oGQXQrab2etUe7RN5psg8.dKz0tQuMYJRj1.pSNMfqB0y2mUx7nIq', filiais: ['Pouso Alegre','Sete Lagoas'] },
+    { nome: 'Tulio Guirelli',  email: 'tulio.guirelli@agross.com.br',  hash: '$2b$10$6l9w33mXTo7rzHe8heqfD.NGOucZ5MuB77oYMjCunZrt2Gdq76ZJq',  filiais: ['Anápolis'] },
+    { nome: 'Lucas Policarpo', email: 'lucas.policarpo@agross.com.br', hash: '$2b$10$t3q3MmyQqxHfz80lklC7A.v7xoYAQayN.v7aQ81LJ.IQRNZTekCUa', filiais: ['Lins'] },
+    { nome: 'Fabio Pires',     email: 'fabio.pires@agross.com.br',     hash: '$2b$10$B5v3aA9Jmx5WTQamIR4VpuXaos9AVjCiCLFRFrFMOzYBVtz45UdvC', filiais: ['Petrolina'] },
+    { nome: 'Marco Mendonca',  email: 'marco.mendonca@agross.com.br',  hash: '$2b$10$u0D8HQfkpWF4QxzEydlnTOc/kvlw8u3Uiph/1xmP/i.phsr.zx0Ra', filiais: ['Cariacica'] },
+    { nome: 'Diego Schons',    email: 'diego.schons@agross.com.br',    hash: '$2b$10$IrGFsKBt0GZGzEM25U32kOIm337qGOY5hMT1tUZ..FeyA.KjU9zK.', filiais: ['Carazinho'] },
+  ];
+  for (const g of dados) {
+    await pool.query(
+      `INSERT INTO gerentes (nome, email, senha_hash, filiais)
+       VALUES ($1,$2,$3,$4) ON CONFLICT (email) DO NOTHING`,
+      [g.nome, g.email, g.hash, g.filiais]
+    );
+  }
 }
 
 async function inserirFormulario(dados) {
