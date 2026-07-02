@@ -114,6 +114,27 @@
   }
   .btn-add-cnpj:hover { background: #e0d9fc; }
 
+  /* ── Combo de CNPJ ── */
+  .combo-wrap { position: relative; }
+  .combo-dd {
+    position: absolute; top: 100%; left: 0; right: 0; margin-top: 4px;
+    background: #fff; border: 1.5px solid #e4e7ec; border-radius: 9px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.14); max-height: 230px; overflow-y: auto;
+    z-index: 60; display: none;
+  }
+  .combo-item {
+    padding: 9px 13px; font-size: 13px; cursor: pointer;
+    display: flex; gap: 8px; align-items: baseline;
+  }
+  .combo-item:hover, .combo-item.active { background: #f5f3ff; }
+  .combo-item .c-cnpj { font-weight: 600; color: #1a1a2e; white-space: nowrap; }
+  .combo-item .c-razao { color: #888; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .combo-new {
+    border-top: 1px solid #f0f2f5; color: #4f46e5; font-weight: 600;
+    position: sticky; bottom: 0; background: #fff;
+  }
+  .combo-new:hover { background: #f5f3ff; }
+
   /* ── Coluna direita: tabela ── */
   .table-card { background: #fff; border-radius: 14px; box-shadow: 0 4px 20px rgba(0,0,0,0.09); overflow: hidden; display: flex; flex-direction: column; flex: 1; }
   .table-header {
@@ -205,9 +226,10 @@
           <input type="text" id="grupo" placeholder="Ex: Rede Verde Campo">
         </div>
         <div class="row-2">
-          <div class="field">
+          <div class="field combo-wrap">
             <label>CNPJ <span class="req">*</span></label>
-            <input type="text" id="cnpj" placeholder="00.000.000/0000-00" maxlength="18" list="cnpj-list" autocomplete="off">
+            <input type="text" id="cnpj" placeholder="00.000.000/0000-00" maxlength="18" autocomplete="off">
+            <div class="combo-dd" id="cnpj-dd"></div>
           </div>
           <div class="field">
             <label>Razão Social <span class="req">*</span></label>
@@ -216,7 +238,6 @@
         </div>
 
         <div id="cnpj-extra-rows"></div>
-        <datalist id="cnpj-list"></datalist>
         <button type="button" class="btn-add-cnpj" onclick="adicionarLinhaCnpj()">+ Adicionar outro CNPJ (mesmo grupo)</button>
 
         <div class="field">
@@ -299,24 +320,35 @@
   function renderCnpjExtras() {
     document.getElementById('cnpj-extra-rows').innerHTML = cnpjExtras.map((row, i) => `
       <div class="grupo-row">
-        <input type="text" class="grupo-cnpj" placeholder="CNPJ" maxlength="18" data-idx="${i}" value="${row.cnpj}" list="cnpj-list" autocomplete="off">
+        <div class="combo-wrap" style="flex:1">
+          <input type="text" class="grupo-cnpj" placeholder="CNPJ" maxlength="18" data-idx="${i}" value="${row.cnpj}" autocomplete="off" style="width:100%">
+          <div class="combo-dd"></div>
+        </div>
         <input type="text" class="grupo-razao" placeholder="Razão Social" data-idx="${i}" value="${row.razao_social}">
         <button type="button" class="btn-remove-row" onclick="removerLinhaCnpj(${i})">×</button>
       </div>
     `).join('');
 
     document.querySelectorAll('.grupo-cnpj').forEach(el => {
+      const idx = Number(el.dataset.idx);
+      const dd = el.parentElement.querySelector('.combo-dd');
+      const pick = existente => {
+        if (existente) {
+          el.value = existente.cnpj;
+          cnpjExtras[idx].cnpj = existente.cnpj;
+          cnpjExtras[idx].razao_social = existente.razao_social;
+          document.querySelector(`.grupo-razao[data-idx="${idx}"]`).value = existente.razao_social;
+        } else {
+          document.querySelector(`.grupo-razao[data-idx="${idx}"]`).focus();
+        }
+      };
+      el.addEventListener('focus', () => abrirCombo(el, dd, pick));
+      el.addEventListener('blur', () => setTimeout(() => dd.style.display = 'none', 120));
       el.addEventListener('input', function(e) {
         const v = formatarCNPJ(e.target.value);
         e.target.value = v;
-        const idx = Number(e.target.dataset.idx);
         cnpjExtras[idx].cnpj = v;
-        // Se o CNPJ já é cadastrado, preenche a razão social automaticamente.
-        const existente = buscarCadastrado(v);
-        if (existente) {
-          cnpjExtras[idx].razao_social = existente.razao_social;
-          document.querySelector(`.grupo-razao[data-idx="${idx}"]`).value = existente.razao_social;
-        }
+        abrirCombo(el, dd, pick);
       });
     });
     document.querySelectorAll('.grupo-razao').forEach(el => {
@@ -375,21 +407,48 @@
       vendedor: r.vendedor, meta: r.meta, fornecedores: r.fornecedores,
       percentual_estimado: r.percentual_estimado, grupo: r.grupo, status: 'salvo'
     })).concat(pendentes);
-    renderCnpjDatalist();
     renderTabela();
-  }
-
-  // Sugestões "CNPJ - Razão Social" com os cadastros já salvos da filial.
-  function renderCnpjDatalist() {
-    document.getElementById('cnpj-list').innerHTML = itens
-      .filter(i => i.status === 'salvo')
-      .map(i => `<option value="${i.cnpj}">${i.cnpj} - ${i.razao_social}</option>`)
-      .join('');
   }
 
   function buscarCadastrado(cnpj) {
     return itens.find(i => i.status === 'salvo' && i.cnpj === cnpj) || null;
   }
+
+  // Combo de CNPJs cadastrados: filtra por CNPJ ou razão social e oferece
+  // a opção de cadastrar um novo quando não há correspondência exata.
+  function abrirCombo(input, dd, onPick) {
+    const q = input.value.trim();
+    const qDigits = q.replace(/\D/g, '');
+    const qLower = q.toLowerCase();
+    const salvos = itens.filter(i => i.status === 'salvo');
+    const matches = !q ? salvos : salvos.filter(i =>
+      (qDigits && i.cnpj.replace(/\D/g, '').includes(qDigits)) ||
+      i.razao_social.toLowerCase().includes(qLower));
+
+    let html = matches.slice(0, 60).map(i => `
+      <div class="combo-item" data-cnpj="${i.cnpj}">
+        <span class="c-cnpj">${i.cnpj}</span>
+        <span class="c-razao">${i.razao_social}</span>
+      </div>`).join('');
+    if (!matches.some(i => i.cnpj === q)) {
+      html += `<div class="combo-item combo-new" data-new="1">+ Cadastrar novo CNPJ${qDigits ? ': ' + q : ''}</div>`;
+    }
+    dd.innerHTML = html;
+    dd.style.display = 'block';
+
+    dd.querySelectorAll('.combo-item').forEach(el => {
+      el.addEventListener('mousedown', ev => {
+        ev.preventDefault();
+        onPick(el.dataset.new ? null : buscarCadastrado(el.dataset.cnpj));
+        dd.style.display = 'none';
+      });
+    });
+  }
+
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.combo-wrap'))
+      document.querySelectorAll('.combo-dd').forEach(d => d.style.display = 'none');
+  });
 
   function adicionarItem() {
     const cnpj                = document.getElementById('cnpj').value.trim();
@@ -658,11 +717,21 @@
     return v;
   }
 
-  document.getElementById('cnpj').addEventListener('input', function(e) {
+  const cnpjInput = document.getElementById('cnpj');
+  const cnpjDd = document.getElementById('cnpj-dd');
+  function pickCnpjPrincipal(existente) {
+    if (existente) {
+      cnpjInput.value = existente.cnpj;
+      document.getElementById('razao_social').value = existente.razao_social;
+    } else {
+      document.getElementById('razao_social').focus();
+    }
+  }
+  cnpjInput.addEventListener('focus', () => abrirCombo(cnpjInput, cnpjDd, pickCnpjPrincipal));
+  cnpjInput.addEventListener('blur', () => setTimeout(() => cnpjDd.style.display = 'none', 120));
+  cnpjInput.addEventListener('input', function(e) {
     e.target.value = formatarCNPJ(e.target.value);
-    // Se selecionou/digitou um CNPJ já cadastrado, preenche a razão social.
-    const existente = buscarCadastrado(e.target.value);
-    if (existente) document.getElementById('razao_social').value = existente.razao_social;
+    abrirCombo(cnpjInput, cnpjDd, pickCnpjPrincipal);
   });
 
   init();
