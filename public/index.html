@@ -100,11 +100,13 @@
   }
   .btn-add:hover { background: #4338ca; }
 
-  .grupo-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
-  .grupo-row input { flex: 1; }
+  .grupo-row { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; margin-bottom: 13px; }
+  .grupo-razao-wrap { position: relative; }
+  .grupo-razao-wrap .grupo-razao { padding-right: 38px; }
   .btn-remove-row {
+    position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
     background: #fee2e2; color: #dc2626; border: none; border-radius: 6px;
-    width: 30px; height: 30px; flex-shrink: 0; cursor: pointer; font-size: 15px;
+    width: 26px; height: 26px; cursor: pointer; font-size: 15px; line-height: 1;
   }
   .btn-remove-row:hover { opacity: 0.75; }
   .btn-add-cnpj {
@@ -320,12 +322,14 @@
   function renderCnpjExtras() {
     document.getElementById('cnpj-extra-rows').innerHTML = cnpjExtras.map((row, i) => `
       <div class="grupo-row">
-        <div class="combo-wrap" style="flex:1">
-          <input type="text" class="grupo-cnpj" placeholder="CNPJ" maxlength="18" data-idx="${i}" value="${row.cnpj}" autocomplete="off" style="width:100%">
+        <div class="combo-wrap">
+          <input type="text" class="grupo-cnpj" placeholder="CNPJ" maxlength="18" data-idx="${i}" value="${row.cnpj}" autocomplete="off">
           <div class="combo-dd"></div>
         </div>
-        <input type="text" class="grupo-razao" placeholder="Razão Social" data-idx="${i}" value="${row.razao_social}">
-        <button type="button" class="btn-remove-row" onclick="removerLinhaCnpj(${i})">×</button>
+        <div class="grupo-razao-wrap">
+          <input type="text" class="grupo-razao" placeholder="Razão Social" data-idx="${i}" value="${row.razao_social}">
+          <button type="button" class="btn-remove-row" onclick="removerLinhaCnpj(${i})">×</button>
+        </div>
       </div>
     `).join('');
 
