@@ -108,6 +108,16 @@
     <div class="dash-grid" id="dash-grid"></div>
   </div>
 
+  <div class="dash-section" id="grupos-section" style="display:none">
+    <div class="dash-header">
+      <div>
+        <div class="dash-title">Meta por grupo</div>
+        <div class="dash-sub" id="grupos-sub"></div>
+      </div>
+    </div>
+    <div class="dash-grid" id="grupos-grid"></div>
+  </div>
+
   <div class="table-card">
     <div class="toolbar">
       <input class="search-input" id="busca" placeholder="🔍  Buscar CNPJ ou razão social..." oninput="filtrar()">
@@ -147,18 +157,11 @@
 
   function renderDash(data) {
     const porFilial = {};
-    const gruposVistos = new Set();
     for (const f of data) {
       const fil = f.filial || 'Sem filial';
       if (!porFilial[fil]) porFilial[fil] = { total: 0, count: 0 };
-      // Meta do grupo conta uma vez por filial; CNPJs sem grupo contam individualmente.
-      let contaMeta = true;
-      if (f.grupo) {
-        const key = fil + '|' + f.grupo;
-        if (gruposVistos.has(key)) contaMeta = false;
-        else gruposVistos.add(key);
-      }
-      if (contaMeta) porFilial[fil].total += Number(f.meta) || 0;
+      // Meta agora é individual por cliente: soma todos os registros.
+      porFilial[fil].total += Number(f.meta) || 0;
       porFilial[fil].count += 1;
     }
     const sorted = Object.entries(porFilial).sort((a, b) => b[1].total - a[1].total);
@@ -186,11 +189,51 @@
     `).join('');
   }
 
+  function renderGrupos(data) {
+    const grupos = {};
+    for (const f of data) {
+      if (!f.grupo) continue;
+      if (!grupos[f.grupo]) grupos[f.grupo] = { total: 0, count: 0, filial: f.filial };
+      grupos[f.grupo].total += Number(f.meta) || 0;
+      grupos[f.grupo].count += 1;
+    }
+    const sorted = Object.entries(grupos).sort((a, b) => b[1].total - a[1].total);
+    const section = document.getElementById('grupos-section');
+    if (sorted.length === 0) {
+      section.style.display = 'none';
+      return;
+    }
+    section.style.display = 'block';
+    const totalGeral = sorted.reduce((s, [, v]) => s + v.total, 0);
+    const maxTotal = sorted[0][1].total || 1;
+    const fmt = v => v >= 1e6
+      ? 'R$ ' + (v / 1e6).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' M'
+      : 'R$ ' + v.toLocaleString('pt-BR');
+
+    document.getElementById('grupos-sub').textContent =
+      sorted.length + ' grupo' + (sorted.length !== 1 ? 's' : '') + ' · Total: ' + fmt(totalGeral);
+
+    document.getElementById('grupos-grid').innerHTML = sorted.map(([nome, v], i) => `
+      <div class="dash-card">
+        <div class="dash-card-header">
+          <span class="dash-card-name">${nome}</span>
+          <span class="dash-card-count">${v.count} CNPJ${v.count !== 1 ? 's' : ''}</span>
+        </div>
+        <div class="dash-card-meta" style="color:${DASH_COLORS[i % DASH_COLORS.length]}">${fmt(v.total)}</div>
+        <div class="dash-bar-bg">
+          <div class="dash-bar-fill" style="width:${Math.round(v.total / maxTotal * 100)}%;background:${DASH_COLORS[i % DASH_COLORS.length]}"></div>
+        </div>
+        <div class="dash-card-pct"><span class="filial-badge">${v.filial}</span></div>
+      </div>
+    `).join('');
+  }
+
   async function carregar() {
     const res = await fetch('/api/admin/formularios');
     todos = await res.json();
     document.getElementById('loading').style.display = 'none';
     renderDash(todos);
+    renderGrupos(todos);
     filtrar();
   }
 
