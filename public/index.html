@@ -207,7 +207,7 @@
         <div class="row-2">
           <div class="field">
             <label>CNPJ <span class="req">*</span></label>
-            <input type="text" id="cnpj" placeholder="00.000.000/0000-00" maxlength="18">
+            <input type="text" id="cnpj" placeholder="00.000.000/0000-00" maxlength="18" list="cnpj-list" autocomplete="off">
           </div>
           <div class="field">
             <label>Razão Social <span class="req">*</span></label>
@@ -216,6 +216,7 @@
         </div>
 
         <div id="cnpj-extra-rows"></div>
+        <datalist id="cnpj-list"></datalist>
         <button type="button" class="btn-add-cnpj" onclick="adicionarLinhaCnpj()">+ Adicionar outro CNPJ (mesmo grupo)</button>
 
         <div class="field">
@@ -298,7 +299,7 @@
   function renderCnpjExtras() {
     document.getElementById('cnpj-extra-rows').innerHTML = cnpjExtras.map((row, i) => `
       <div class="grupo-row">
-        <input type="text" class="grupo-cnpj" placeholder="CNPJ" maxlength="18" data-idx="${i}" value="${row.cnpj}">
+        <input type="text" class="grupo-cnpj" placeholder="CNPJ" maxlength="18" data-idx="${i}" value="${row.cnpj}" list="cnpj-list" autocomplete="off">
         <input type="text" class="grupo-razao" placeholder="Razão Social" data-idx="${i}" value="${row.razao_social}">
         <button type="button" class="btn-remove-row" onclick="removerLinhaCnpj(${i})">×</button>
       </div>
@@ -308,7 +309,14 @@
       el.addEventListener('input', function(e) {
         const v = formatarCNPJ(e.target.value);
         e.target.value = v;
-        cnpjExtras[Number(e.target.dataset.idx)].cnpj = v;
+        const idx = Number(e.target.dataset.idx);
+        cnpjExtras[idx].cnpj = v;
+        // Se o CNPJ já é cadastrado, preenche a razão social automaticamente.
+        const existente = buscarCadastrado(v);
+        if (existente) {
+          cnpjExtras[idx].razao_social = existente.razao_social;
+          document.querySelector(`.grupo-razao[data-idx="${idx}"]`).value = existente.razao_social;
+        }
       });
     });
     document.querySelectorAll('.grupo-razao').forEach(el => {
@@ -367,7 +375,20 @@
       vendedor: r.vendedor, meta: r.meta, fornecedores: r.fornecedores,
       percentual_estimado: r.percentual_estimado, grupo: r.grupo, status: 'salvo'
     })).concat(pendentes);
+    renderCnpjDatalist();
     renderTabela();
+  }
+
+  // Sugestões "CNPJ - Razão Social" com os cadastros já salvos da filial.
+  function renderCnpjDatalist() {
+    document.getElementById('cnpj-list').innerHTML = itens
+      .filter(i => i.status === 'salvo')
+      .map(i => `<option value="${i.cnpj}">${i.cnpj} - ${i.razao_social}</option>`)
+      .join('');
+  }
+
+  function buscarCadastrado(cnpj) {
+    return itens.find(i => i.status === 'salvo' && i.cnpj === cnpj) || null;
   }
 
   function adicionarItem() {
@@ -639,6 +660,9 @@
 
   document.getElementById('cnpj').addEventListener('input', function(e) {
     e.target.value = formatarCNPJ(e.target.value);
+    // Se selecionou/digitou um CNPJ já cadastrado, preenche a razão social.
+    const existente = buscarCadastrado(e.target.value);
+    if (existente) document.getElementById('razao_social').value = existente.razao_social;
   });
 
   init();
