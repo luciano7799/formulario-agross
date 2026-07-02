@@ -19,6 +19,14 @@ async function init() {
       criado_em TIMESTAMPTZ DEFAULT NOW()
     )
   `);
+  // Limpeza antes do índice único: remove linhas de teste e deduplica por CNPJ,
+  // mantendo sempre o registro mais recente (maior id). Idempotente.
+  await pool.query(`DELETE FROM formularios WHERE cnpj = '00.000.000/0001-TEST'`);
+  await pool.query(`
+    DELETE FROM formularios a
+    USING formularios b
+    WHERE a.cnpj = b.cnpj AND a.id < b.id
+  `);
   await pool.query(`
     CREATE UNIQUE INDEX IF NOT EXISTS formularios_cnpj_idx ON formularios (cnpj)
   `);
