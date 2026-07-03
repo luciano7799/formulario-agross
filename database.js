@@ -31,6 +31,9 @@ async function init() {
     CREATE UNIQUE INDEX IF NOT EXISTS formularios_cnpj_idx ON formularios (cnpj)
   `);
   await pool.query(`ALTER TABLE formularios ADD COLUMN IF NOT EXISTS grupo TEXT`);
+  // Corrige grafia antiga da filial (o formulário original usava "Cariacia").
+  await pool.query(`UPDATE formularios SET filial = 'Cariacica' WHERE filial = 'Cariacia'`);
+  await pool.query(`UPDATE gerentes SET filiais = array_replace(filiais, 'Cariacia', 'Cariacica') WHERE 'Cariacia' = ANY(filiais)`);
   await pool.query(`
     CREATE TABLE IF NOT EXISTS gerentes (
       id SERIAL PRIMARY KEY,
