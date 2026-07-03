@@ -295,6 +295,7 @@
               <th>Meta</th>
               <th>% Est.</th>
               <th>Fornecedores</th>
+              <th>Enviado em</th>
               <th>Status</th>
               <th></th>
             </tr>
@@ -443,7 +444,8 @@
     itens = salvos.map(r => ({
       id: r.id, cnpj: r.cnpj, razao_social: r.razao_social, filial: r.filial,
       vendedor: r.vendedor, meta: r.meta, fornecedores: r.fornecedores,
-      percentual_estimado: r.percentual_estimado, grupo: r.grupo, status: 'salvo'
+      percentual_estimado: r.percentual_estimado, grupo: r.grupo,
+      criado_em: r.criado_em, status: 'salvo'
     })).concat(pendentes);
     renderTabela();
   }
@@ -691,6 +693,7 @@
         <td>R$ ${it.meta.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
         <td>${it.percentual_estimado != null ? it.percentual_estimado + '%' : '-'}</td>
         <td>${it.fornecedores || '-'}</td>
+        <td>${it.criado_em || '-'}</td>
         <td>${it.status === 'pendente'
               ? '<span class="status-pend">Pendente</span>'
               : '<span class="status-salvo">Salvo</span>'}</td>

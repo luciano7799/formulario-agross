@@ -129,7 +129,8 @@ async function atualizarMeta(id, dados) {
   await pool.query(
     `UPDATE formularios SET
        cnpj = $1, razao_social = $2, filial = $3, vendedor = $4, meta = $5,
-       fornecedores = $6, percentual_estimado = $7, grupo = $8
+       fornecedores = $6, percentual_estimado = $7, grupo = $8,
+       criado_em = NOW()
      WHERE id = $9`,
     [dados.cnpj, dados.razao_social, dados.filial, dados.vendedor, dados.meta,
      dados.fornecedores || null, dados.percentual_estimado || null,
