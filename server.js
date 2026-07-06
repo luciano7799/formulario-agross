@@ -122,6 +122,26 @@ app.get('/api/admin/export', requireAdmin, async (req, res) => {
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet(linhas);
     XLSX.utils.book_append_sheet(wb, ws, 'Formulários');
+
+    // Aba resumo: uma linha por grupo, com qtde de CNPJs e meta somada.
+    const grupos = {};
+    for (const r of dados) {
+      if (!r.grupo) continue;
+      const key = r.filial + '|' + r.grupo;
+      if (!grupos[key]) grupos[key] = { filial: r.filial, grupo: r.grupo, qtde: 0, meta: 0 };
+      grupos[key].qtde += 1;
+      grupos[key].meta += Number(r.meta) || 0;
+    }
+    const linhasGrupos = Object.values(grupos)
+      .sort((a, b) => a.filial.localeCompare(b.filial) || a.grupo.localeCompare(b.grupo))
+      .map(g => ({
+        'Filial': g.filial,
+        'Nome do Grupo': g.grupo,
+        'Qtde CNPJ': g.qtde,
+        'Meta (R$)': g.meta
+      }));
+    const wsGrupos = XLSX.utils.json_to_sheet(linhasGrupos);
+    XLSX.utils.book_append_sheet(wb, wsGrupos, 'Metas por Grupo');
     const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
     res.setHeader('Content-Disposition', 'attachment; filename="formularios.xlsx"');
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
