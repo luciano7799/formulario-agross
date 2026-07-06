@@ -146,15 +146,6 @@ async function atualizarMeta(id, dados) {
   );
 }
 
-// Propaga a meta para todos os CNPJs de um grupo, dentro das filiais do gerente.
-// A meta é um alvo único do grupo, então editar um CNPJ atualiza o grupo inteiro.
-async function propagarMetaDoGrupo(grupo, meta, filiais) {
-  await pool.query(
-    `UPDATE formularios SET meta = $1 WHERE grupo = $2 AND filial = ANY($3)`,
-    [meta, grupo, filiais]
-  );
-}
-
 async function excluirMeta(id) {
   const { rowCount } = await pool.query(`DELETE FROM formularios WHERE id = $1`, [id]);
   return rowCount;
@@ -163,5 +154,5 @@ async function excluirMeta(id) {
 module.exports = {
   pool, init, inserirFormulario, listarFormularios,
   buscarGerentePorEmail, listarMetasPorFiliais, buscarMetaPorId,
-  atualizarMeta, propagarMetaDoGrupo, excluirMeta
+  atualizarMeta, excluirMeta
 };

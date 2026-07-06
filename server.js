@@ -8,7 +8,7 @@ const { gerenteTemFilial } = require('./auth');
 const {
   pool, init, inserirFormulario, listarFormularios,
   buscarGerentePorEmail, listarMetasPorFiliais, buscarMetaPorId,
-  atualizarMeta, propagarMetaDoGrupo, excluirMeta
+  atualizarMeta, excluirMeta
 } = require('./database');
 
 const app = express();
@@ -184,7 +184,9 @@ app.put('/api/minhas-metas/:id', requireGerente, async (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (isNaN(id)) return res.status(400).json({ error: 'ID inválido.' });
   const { cnpj, razao_social, filial, vendedor, meta, fornecedores, percentual_estimado, grupo } = req.body;
-  if (!cnpj || !razao_social || !filial || !vendedor || !meta)
+  // Itens de grupo podem ter meta 0 (a meta do grupo é a soma dos CNPJs).
+  const metaOk = grupo ? meta != null && meta !== '' && Number(meta) >= 0 : !!meta;
+  if (!cnpj || !razao_social || !filial || !vendedor || !metaOk)
     return res.status(400).json({ error: 'Campos obrigatórios faltando.' });
   const gerente = req.session.gerente;
   if (!gerenteTemFilial(gerente, filial))
@@ -197,8 +199,6 @@ app.put('/api/minhas-metas/:id', requireGerente, async (req, res) => {
     await atualizarMeta(id, { cnpj, razao_social, filial, vendedor, meta,
       fornecedores: fornecedores || null, percentual_estimado: percentual_estimado || null,
       grupo: grupo || null });
-    // Meta é um alvo único do grupo: propaga o novo valor para todos os CNPJs do grupo.
-    if (grupo) await propagarMetaDoGrupo(grupo, meta, gerente.filiais);
     res.json({ success: true });
   } catch (err) {
     console.error(err);
@@ -230,7 +230,11 @@ app.post('/api/formulario', requireGerente, async (req, res) => {
     return res.status(400).json({ error: 'Nenhum item para salvar.' });
   const gerente = req.session.gerente;
   for (const item of itens) {
-    if (!item.cnpj || !item.razao_social || !item.filial || !item.vendedor || !item.meta)
+    // Itens de grupo podem ter meta 0 (a meta do grupo é a soma dos CNPJs).
+    const metaOk = item.grupo
+      ? item.meta != null && item.meta !== '' && Number(item.meta) >= 0
+      : !!item.meta;
+    if (!item.cnpj || !item.razao_social || !item.filial || !item.vendedor || !metaOk)
       return res.status(400).json({ error: 'Um ou mais itens estão com campos obrigatórios faltando.' });
     if (!gerenteTemFilial(gerente, item.filial))
       return res.status(403).json({ error: 'Item com filial fora da sua área.' });
