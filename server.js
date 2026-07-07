@@ -14,8 +14,10 @@ const {
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const ADMIN_EMAIL = 'patricia.viana@agross.com.br';
-const ADMIN_SENHA = 'pati@agross';
+const ADMINS = {
+  'patricia.viana@agross.com.br': '$2b$10$oINZO53I0wqIuDm.D/ToBubfQ8B6WEaJn4XAQJnIUpgZPhxCRGwzy',
+  'claudio.tafner@agross.com.br': '$2b$10$7g4U7j.kplwJORqkMPHHe.I8xPPaXUTRqWA8gT9B.elnZGOPaWlPa',
+};
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -78,7 +80,8 @@ app.get('/admin/login', (req, res) => {
 
 app.post('/admin/login', (req, res) => {
   const { email, senha } = req.body;
-  if (email === ADMIN_EMAIL && senha === ADMIN_SENHA) {
+  const hash = ADMINS[(email || '').trim().toLowerCase()];
+  if (hash && bcrypt.compareSync(senha || '', hash)) {
     req.session.admin = true;
     return res.redirect('/admin');
   }
