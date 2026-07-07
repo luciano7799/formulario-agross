@@ -132,7 +132,8 @@
         <option>Cariacica</option>
         <option>Carazinho</option>
       </select>
-      <span class="badge-total" id="contador">0 registros</span>
+      <span class="badge-total" id="soma-meta" style="margin-left:auto;background:#e6f7f0;color:#059669"></span>
+      <span class="badge-total" id="contador" style="margin-left:0">0 registros</span>
     </div>
     <div class="table-wrap">
       <table>
@@ -251,6 +252,9 @@
     const tbody = document.getElementById('tbody');
     const empty = document.getElementById('empty');
     document.getElementById('contador').textContent = lista.length + ' registro' + (lista.length !== 1 ? 's' : '');
+    const somaMeta = lista.reduce((s, r) => s + (Number(r.meta) || 0), 0);
+    document.getElementById('soma-meta').textContent =
+      'Meta total: R$ ' + somaMeta.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
     if (lista.length === 0) {
       tbody.innerHTML = '';
       empty.style.display = 'block';
