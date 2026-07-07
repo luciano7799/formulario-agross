@@ -132,6 +132,9 @@
         <option>Cariacica</option>
         <option>Carazinho</option>
       </select>
+      <select class="filter-select" id="filtro-grupo" onchange="filtrar()">
+        <option value="">Todos os grupos</option>
+      </select>
       <span class="badge-total" id="soma-meta" style="margin-left:auto;background:#e6f7f0;color:#059669"></span>
       <span class="badge-total" id="contador" style="margin-left:0">0 registros</span>
     </div>
@@ -233,6 +236,10 @@
     const res = await fetch('/api/admin/formularios');
     todos = await res.json();
     document.getElementById('loading').style.display = 'none';
+    const grupos = [...new Set(todos.map(r => r.grupo).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+    document.getElementById('filtro-grupo').innerHTML =
+      '<option value="">Todos os grupos</option>' +
+      grupos.map(g => `<option>${g}</option>`).join('');
     renderDash(todos);
     renderGrupos(todos);
     filtrar();
@@ -241,9 +248,11 @@
   function filtrar() {
     const busca  = document.getElementById('busca').value.toLowerCase();
     const filial = document.getElementById('filtro-filial').value;
+    const grupo  = document.getElementById('filtro-grupo').value;
     const filtrados = todos.filter(r =>
       (!busca  || r.cnpj.toLowerCase().includes(busca) || r.razao_social.toLowerCase().includes(busca) || (r.grupo || '').toLowerCase().includes(busca)) &&
-      (!filial || r.filial === filial)
+      (!filial || r.filial === filial) &&
+      (!grupo  || r.grupo === grupo)
     );
     renderizar(filtrados);
   }
