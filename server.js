@@ -73,6 +73,9 @@ app.get('/', requireGerente, (req, res) => {
 
 app.use(express.static(path.join(__dirname, 'public')));
 
+// ── TV corporativa (pública) ──
+app.use('/tv', express.static(path.join(__dirname, 'tv')));
+
 // ── Login / Logout ──
 app.get('/admin/login', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'admin', 'login.html'));
