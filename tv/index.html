@@ -14,6 +14,12 @@
 <script>
   var v = document.getElementById('v');
   v.play();
+  // clique/toque em qualquer lugar entra em tela cheia (navegador exige gesto do usuario)
+  document.addEventListener('click', function () {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(function () {});
+    }
+  });
   // failsafe: se travar, recarrega a pagina
   setInterval(function () { if (v.paused) location.reload(); }, 30000);
 </script>
